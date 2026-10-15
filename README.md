@@ -1,125 +1,127 @@
-# WhiteWOOD SRL — website
+# WhiteWOOD SRL Website
 
-Site bilingv RO/EN pentru WhiteWOOD, cu pagini editoriale randate pe server, catalog din D1, formular B2B și administrare privată.
+A bilingual Romanian and English website for WhiteWOOD, with server-rendered editorial pages, a D1 catalogue, a B2B form and private administration.
 
-## Capturi de ecran
+## Screenshots
 
-### Pagina principală
+These screenshots show the English website.
 
-![Pagina principală WhiteWOOD](screenshots/home.jpg)
+### Home page
 
-### Catalog produse
+![WhiteWOOD home page in English](screenshots/home.jpg)
 
-![Catalogul de cherestea WhiteWOOD](screenshots/products.jpg)
+### Product catalogue
 
-### Procesare și logistică
+![WhiteWOOD timber catalogue in English](screenshots/products.jpg)
 
-![Procesarea și pregătirea cherestelei WhiteWOOD](screenshots/process.jpg)
+### Processing and logistics
 
-## Cerințe
+![WhiteWOOD timber processing and preparation page in English](screenshots/process.jpg)
 
-- Node.js 22.12+ (sau mai nou)
+## Requirements
+
+- Node.js 22.12 or later
 - npm
 
-Nu este necesar un cont Cloudflare pentru dezvoltare. Wrangler rulează D1 local cu aceeași schemă ca D1 din producție.
+A Cloudflare account is not needed for local development. Wrangler runs a local D1 database with the same schema as production D1.
 
-## Dezvoltare locală
+## Local development
 
-Din acest director:
+From this directory:
 
-```powershell
+~~~powershell
 npm ci
 npm run db:setup:local
 npm run dev
-```
+~~~
 
-Deschide adresa locală afișată de Astro. Setup-ul creează `.dev.vars` numai dacă fișierul nu există, aplică migrațiile cu `--local`, încarcă date demo și indexul asset-urilor în D1 local. Datele persistă în `.wrangler/`, director exclus din Git. `npm run dev` pregătește derivatele AVIF/WebP în `public/images/`; copiile media originale rămân în `media/originals/`, în afara directorului public.
+Open the local address printed by Astro. Setup creates **.dev.vars** only if that file does not already exist, applies migrations with **--local**, and loads demo data and the asset index into local D1. Data persists in **.wrangler/**, which is ignored by Git. **npm run dev** prepares AVIF/WebP derivatives in **public/images/**; original media copies remain in **media/originals/** outside the public directory.
 
-Pentru primul cont local, deschide `/admin/setup/`, completează e-mailul și o parolă de minimum 12 caractere și folosește tokenul din fișierul local ignorat `.dev.vars`. Pagina de inițializare se închide după crearea primului cont. Nu există cont sau parolă implicită.
+For the first local account, open **/admin/setup/**, enter an email and a password of at least 12 characters, then use the token in the local, Git-ignored **.dev.vars** file. The setup page closes after the first account is created. There is no default account or password.
 
-Cererea trimisă în modul local este marcată `LOCAL DEMO`, stocată numai în D1 local și vizibilă din `/admin/requests/`. Nicio e-mailare nu este configurată. Formularul local nu indică o trimitere către companie.
+A request submitted in local mode is marked **LOCAL DEMO**, stored only in local D1 and visible at **/admin/requests/**. Email delivery is not configured. The local form does not indicate that a request was sent to the company.
 
-## Verificare și build
+## Checks and production build
 
-```powershell
+~~~powershell
 npm run check
 npm run build
 npm run preview
-```
+~~~
 
-`npm run build` pregătește versiunea destinată producției. Fotografiile sunt copiate în `public/images/` numai când `PUBLIC_MEDIA_APPROVED=true` este configurat pentru producție; valoarea implicită este `false`. Setarea de runtime controlează și afișarea imaginilor. Derivatele se pot recrea cu `npm run assets:optimize`, fără a modifica originalele.
+**npm run build** prepares the production version. Photographs are copied to **public/images/** only when **PUBLIC_MEDIA_APPROVED=true** is configured for production; the default is **false**. The runtime setting also controls image display. Recreate derivatives with **npm run assets:optimize** without changing the originals.
 
-Comenzi pentru inventar și media:
+Inventory and media commands:
 
-```powershell
+~~~powershell
 npm run assets:inventory
 npm run assets:optimize
-```
+~~~
 
-## D1 și migrații
+## D1 and migrations
 
-Binding-ul server-side se numește `DB`. Dezvoltarea folosește D1 local persistent prin Wrangler, iar producția folosește baza D1 Cloudflare definită separat în `wrangler.jsonc`. Modul local nu folosește binding-ul de producție; indisponibilitatea bazei nu este confirmată ca salvare reușită și nu declanșează o trecere automată către altă bază.
+The server-side binding is named **DB**. Development uses persistent local D1 through Wrangler, while production uses the Cloudflare D1 database defined separately in **wrangler.jsonc**. Local mode does not use the production binding; if the database is unavailable, the site does not report the save as successful or automatically switch to another database.
 
-Comenzi **locale** — nu accesează D1 Cloudflare:
+**Local commands** — these do not access Cloudflare D1:
 
-```powershell
+~~~powershell
 npm run db:migrate:local
 npm run db:seed:local
 npm run db:setup:local
 npx wrangler d1 export whitewoodsrl-local --local --output=./backup-local.sql
-```
+~~~
 
-Comenzi **remote** — intenționat neexecutate în această lucrare:
+**Remote commands** — intentionally not run as part of this work:
 
-```powershell
+~~~powershell
 npm run db:migrate:production
 npx wrangler d1 export whitewoodsrl-production --remote --env production --output=./backup-production.sql
-```
+~~~
 
-Înainte de orice comandă remote, creează/configurează D1 în contul WhiteWOOD și înlocuiește ID-ul placeholder cu ID-ul emis de Cloudflare în `wrangler.jsonc`. Comanda de migrare remote modifică schema bazei Cloudflare. Exporturile pot conține date personale și trebuie păstrate într-un loc cu acces controlat.
+Before any remote command, create/configure D1 in the WhiteWOOD Cloudflare account and replace the placeholder ID in **wrangler.jsonc** with the ID issued by Cloudflare. The remote migration command changes the Cloudflare database schema. Exports may contain personal data and must be stored with access controls.
 
-## Producție Cloudflare
+## Cloudflare production
 
-Nu au fost create resurse Cloudflare, nu s-au rulat migrații remote și nu s-a făcut deploy. Pentru o lansare viitoare:
+No Cloudflare resources were created, no remote migrations were run and no deployment was made. For a future launch:
 
-1. Configurează baza D1 de producție și ID-ul ei în `wrangler.jsonc`.
-2. Revizuiește textele juridice și fluxul de prelucrare a cererilor; activează formularul numai după aprobarea informării.
-3. Confirmă drepturile pentru fotografii și aprobă selecția folosită pe site.
-4. Configurează secretele server-side:
+1. Configure the production D1 database and its ID in **wrangler.jsonc**.
+2. Review legal text and the enquiry processing flow; enable the form only after the privacy notice is approved.
+3. Confirm rights to the photographs and approve the selection used on the website.
+4. Configure server-side secrets:
 
-   ```powershell
+   ~~~powershell
    npx wrangler secret put SESSION_SECRET --env production
    npx wrangler secret put ADMIN_BOOTSTRAP_TOKEN --env production
-   ```
+   ~~~
 
-5. Configurează `PRIVACY_NOTICE_APPROVED=true` și `PUBLIC_MEDIA_APPROVED=true` în variabilele de producție numai după aprobările corespunzătoare. Pentru build, setează `PUBLIC_MEDIA_APPROVED=true` în mediul procesului de build sau în `wrangler.jsonc`.
-6. Aplică migrațiile cu `npm run db:migrate:production`, apoi creează primul administrator la `/admin/setup/` folosind tokenul one-time. După bootstrap, șterge secretul `ADMIN_BOOTSTRAP_TOKEN` din mediul production.
-7. Fă deploy numai după verificarea mediului, a ID-urilor și a aprobărilor:
+5. Set **PRIVACY_NOTICE_APPROVED=true** and **PUBLIC_MEDIA_APPROVED=true** in production variables only after the corresponding approvals. For the build, set **PUBLIC_MEDIA_APPROVED=true** in the build process environment or in **wrangler.jsonc**.
+6. Apply migrations with **npm run db:migrate:production**, then create the first administrator at **/admin/setup/** using the one-time token. After bootstrap, remove **ADMIN_BOOTSTRAP_TOKEN** from the production environment.
+7. Deploy only after checking the environment, IDs and approvals:
 
-   ```powershell
+   ~~~powershell
    npm run deploy:production
-   ```
+   ~~~
 
-Lista numelor de variabile: `APP_MODE`, `SITE_ORIGIN`, `SESSION_SECRET`, `ADMIN_BOOTSTRAP_TOKEN`, `PRIVACY_NOTICE_APPROVED`, `PUBLIC_MEDIA_APPROVED`; `DB` este binding, nu secret text. Nu pune secrete în cod, în Git sau în browser. `.dev.vars` este ignorat de Git.
+Variable names: **APP_MODE**, **SITE_ORIGIN**, **SESSION_SECRET**, **ADMIN_BOOTSTRAP_TOKEN**, **PRIVACY_NOTICE_APPROVED** and **PUBLIC_MEDIA_APPROVED**. **DB** is a binding, not a text secret. Do not put secrets in code, Git or the browser. **.dev.vars** is ignored by Git.
 
-## Pagini și URL-uri
+## Pages and URLs
 
-- RO: `/ro/`, `/ro/produse/`, `/ro/proces/`, `/ro/despre/`, `/ro/articole/`, `/ro/contact/`, `/ro/confidentialitate/`, `/ro/cookies/`.
-- EN: `/en/`, `/en/products/`, `/en/process/`, `/en/about/`, `/en/articles/`, `/en/contact/`, `/en/privacy/`, `/en/cookies/`.
-- Produsele și articolele au pagini de detaliu; numai produse confirmate și articole aprobate sunt publicate.
-- Administrare: `/admin/` cu login, configurare inițială, catalog/categorii, pagini bilingve, articole, traduceri, bibliotecă media, cereri, note și jurnal.
-- Redirect-urile URL-urilor vechi sunt definite în `astro.config.mjs`. Articolele vechi duc la arhiva de articole până la revizie.
-- `sitemap.xml` include paginile publice, produsele și articolele aprobate; `robots.txt` exclude adminul și API-ul.
+- RO: **/ro/**, **/ro/produse/**, **/ro/proces/**, **/ro/despre/**, **/ro/articole/**, **/ro/contact/**, **/ro/confidentialitate/** and **/ro/cookies/**.
+- EN: **/en/**, **/en/products/**, **/en/process/**, **/en/about/**, **/en/articles/**, **/en/contact/**, **/en/privacy/** and **/en/cookies/**.
+- Products and articles have detail pages; only confirmed products and approved articles are published.
+- Admin: **/admin/** with login, initial setup, catalogue/categories, bilingual pages, articles, translations, media library, requests, notes and audit log.
+- Redirects for old URLs are defined in **astro.config.mjs**. Old article URLs lead to the article archive pending review.
+- **sitemap.xml** includes public pages, products and approved articles; **robots.txt** excludes the admin and API.
 
-## Starea conținutului înainte de lansare
+## Content status before launch
 
-Consultați [planul de implementare](docs/IMPLEMENTATION_PLAN.md) și [inventarul de asset-uri](docs/ASSET_INVENTORY.md). Înainte de publicare, WhiteWOOD trebuie să reconfirme datele de contact, stocul și oferta curentă, specificațiile/umiditatea/dimensiunile, tratamentele și certificările, traseele logistice, utilizările comerciale ale fotografiilor și textele de confidențialitate/cookies. Câmpurile tehnice de demo nu se publică în producție până la confirmare.
+See the [implementation plan](docs/IMPLEMENTATION_PLAN.md) and [asset inventory](docs/ASSET_INVENTORY.md). Before publication, WhiteWOOD should reconfirm contact details, current stock and offers, specifications/moisture/dimensions, treatments and certifications, logistics routes, commercial rights for photographs, and privacy/cookie text. Demo technical fields should not be published in production until confirmed.
 
-Formularul nu acceptă atașamente: nu este configurată o stocare de fișiere. Seed-ul local oglindește datele de contact de pe pagina curentă WhiteWOOD; confirmarea lor directă rămâne necesară înainte de importul în D1 de producție. Nu se afișează hartă de export, capacități sau certificări.
+The form does not accept attachments because file storage is not configured. The local seed mirrors the contact details on the current WhiteWOOD page; they still need direct confirmation before importing them into production D1. No export map, capacity figures or certifications are displayed.
 
-## Referințe tehnice oficiale
+## Official technical references
 
 - [Astro Cloudflare adapter](https://docs.astro.build/en/guides/integrations-guide/cloudflare/)
-- [Dezvoltare locală D1](https://developers.cloudflare.com/d1/best-practices/local-development/)
-- [Migrații D1](https://developers.cloudflare.com/d1/reference/migrations/)
-- [Comenzi Wrangler D1 și export](https://developers.cloudflare.com/d1/wrangler-commands/)
+- [D1 local development](https://developers.cloudflare.com/d1/best-practices/local-development/)
+- [D1 migrations](https://developers.cloudflare.com/d1/reference/migrations/)
+- [Wrangler D1 commands and export](https://developers.cloudflare.com/d1/wrangler-commands/)
