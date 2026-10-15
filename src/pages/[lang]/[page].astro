@@ -1,0 +1,253 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import Photo from "../../components/Photo.astro";
+import RequestForm from "../../components/RequestForm.astro";
+import ContactMaps from "../../components/ContactMaps.astro";
+import ExportMarketsMap from "../../components/ExportMarketsMap.astro";
+import NotFoundPanel from "../../components/NotFoundPanel.astro";
+import WoodMotif from "../../components/WoodMotif.astro";
+import { getAppMode, getDatabase, getEnvironment, mediaIsAllowed } from "../../lib/db";
+import { isLanguage, type SiteLanguage } from "../../lib/language";
+import { getContentPage, getPublishedArticles, getPublishedProducts } from "../../lib/repositories";
+
+export const prerender = false;
+const languageParam = Astro.params.lang;
+if (!isLanguage(languageParam)) Astro.response.status = 404;
+const language: SiteLanguage = isLanguage(languageParam) ? languageParam : "ro";
+const ro = language === "ro";
+const route = Astro.params.page || "";
+const routeMap = ro
+  ? { despre: "about", proces: "process", contact: "contact", articole: "articles", confidentialitate: "privacy", cookies: "cookies" }
+  : { about: "about", process: "process", contact: "contact", articles: "articles", privacy: "privacy", cookies: "cookies" };
+const routeType = (routeMap as Record<string, string>)[route];
+const type = routeType || "not-found";
+if (!routeType) Astro.response.status = 404;
+const mode = getAppMode();
+const db = getDatabase();
+const page = type === "about" || type === "process" || type === "privacy" || type === "cookies"
+  ? await getContentPage(db, type, language, mode)
+  : null;
+const mediaEnabled = mediaIsAllowed();
+const processSteps: Array<[string, string, string]> = ro ? [
+  ["01", "Impregnare și protecție", "Tratamentul Tanalith protejează lemnul împotriva putregaiului și insectelor."],
+  ["02", "Uscare", "În funcție de sortiment, cheresteaua este uscată natural la aer sau în uscător."],
+  ["03", "Verificare și sortare", "Cheresteaua este verificată și sortată înaintea pregătirii pentru expediere."],
+  ["04", "Vopsire și marcare", "Vopsirea și marcarea identifică și pregătesc lotul pentru expediere."],
+  ["05", "Ambalare și pachetizare", "Cheresteaua este ambalată și pachetizată pentru manipulare și transport."],
+  ["06", "Încărcare cu Container Filler", "Echipamentul Container Filler încarcă cheresteaua în containere și utilizează eficient spațiul disponibil."]
+] : [
+  ["01", "Impregnation and protection", "Tanalith treatment protects timber against rot and insects."],
+  ["02", "Drying", "Depending on the grade, timber is air-dried or kiln-dried."],
+  ["03", "Checking and sorting", "Sawn timber is checked and sorted before shipment preparation."],
+  ["04", "Painting and marking", "Painting and marking identify and prepare the lot for shipment."],
+  ["05", "Packaging and bundling", "Sawn timber is packaged and bundled for handling and transport."],
+  ["06", "Container Filler loading", "Container Filler loads timber into containers and makes efficient use of available space."]
+];
+const alternatePaths: Record<string, string> = {
+  about: ro ? "/en/about/" : "/ro/despre/",
+  process: ro ? "/en/process/" : "/ro/proces/",
+  contact: ro ? "/en/contact/" : "/ro/contact/",
+  articles: ro ? "/en/articles/" : "/ro/articole/",
+  privacy: ro ? "/en/privacy/" : "/ro/confidentialitate/",
+  cookies: ro ? "/en/cookies/" : "/ro/cookies/"
+};
+const title = type === "about" ? (page?.seoTitle || (ro ? "Despre WhiteWOOD" : "About WhiteWOOD"))
+  : type === "process" ? (ro ? "Procesare și logistică la Constanța | WhiteWOOD" : "Timber processing and logistics in Constanța | WhiteWOOD")
+  : type === "contact" ? (ro ? "Contact și ofertă | WhiteWOOD" : "Contact and quote | WhiteWOOD")
+  : type === "articles" ? (ro ? "Articole despre lemn | WhiteWOOD" : "Timber articles | WhiteWOOD")
+  : type === "privacy" ? (ro ? "Confidențialitate | WhiteWOOD" : "Privacy | WhiteWOOD")
+  : type === "cookies" ? (ro ? "Politica de cookie | WhiteWOOD" : "Cookie policy | WhiteWOOD")
+  : (ro ? "Pagina nu a fost găsită | WhiteWOOD" : "Page not found | WhiteWOOD");
+const description = type === "process"
+  ? (ro ? "Impregnare Tanalith, uscare, sortare, ambalare și încărcare cu Container Filler la Portul Constanța." : "Tanalith treatment, drying, sorting, packaging and Container Filler loading at the Port of Constanța.")
+  : page?.seoDescription || (type === "contact"
+  ? (ro ? "Contactează echipa WhiteWOOD pentru informații despre sortimente și oferte. Găsește sediul din București și punctul logistic din Constanța." : "Contact WhiteWOOD for timber grades and quotes. Find the registered office in Bucharest and logistics location in Constanța.")
+  : type === "articles"
+    ? (ro ? "Materiale despre cherestea, utilizările lemnului și aplicațiile sale în construcții și industrie." : "Articles on sawn timber, the uses of wood and its applications in construction and industry.")
+    : "");
+const products = type === "contact" ? await getPublishedProducts(db, language, mode) : [];
+const privacyApproved = getEnvironment().PRIVACY_NOTICE_APPROVED === "true";
+const formEnabled = mode === "local" || privacyApproved;
+const articles = type === "articles" ? await getPublishedArticles(db, language, mode) : [];
+const formSuccess = type === "contact" && Astro.url.searchParams.get("sent") === "1";
+const policyUrl = type === "privacy"
+  ? "https://whitewoodtrading.com/ro/protectie-date-caracter-personal.html"
+  : "https://policies.google.com/privacy?hl=ro";
+---
+
+<SiteLayout language={language} title={title} description={description} alternateHref={alternatePaths[type] || (ro ? "/en/" : "/ro/")} noindex={type === "privacy" || type === "cookies" || type === "not-found"}>
+  {type === "about" ? (
+    <>
+      <section class="wrap page-hero">
+        <div><p class="eyebrow">{ro ? "WhiteWOOD / Despre" : "WhiteWOOD / About"}</p><h1>{page?.title || (ro ? "Despre WhiteWOOD" : "About WhiteWOOD")}</h1></div>
+        <div><p class="lede">{page?.intro}</p></div>
+      </section>
+      <section class:list={["wrap section--tight about-detail", !mediaEnabled && "about-detail--text-only"]}>
+        <div class="legal-copy">{page?.body}</div>
+        {mediaEnabled && <figure class="about-photo"><Photo name="process-yard" alt={ro ? "Pachete de cherestea pregătite pentru transport" : "Packs of sawn timber prepared for shipment"} sizes="(max-width: 760px) 100vw, 48vw" /></figure>}
+      </section>
+      <section id="about-operations" class="wrap section--tight about-operations">
+        <div class="section-heading">
+          <div><p class="eyebrow">{ro ? "Prelucrare / pregătire" : "Processing / preparation"}</p><h2>{ro ? "Cherestea pregătită pentru utilizare și transport." : "Timber prepared for use and shipment."}</h2></div>
+          <p class="lede">{ro ? "Impregnarea, uscarea, sortarea și finisarea pregătesc cheresteaua pentru utilizare și transport." : "Impregnation, drying, grading and finishing prepare sawn timber for use and shipment."}</p>
+        </div>
+        <div class="about-step-grid">
+          {(ro ? [
+            ["01", "Impregnare", "Tratamentul Tanalith protejează lemnul împotriva putrezirii și insectelor."],
+            ["02", "Uscare", "Uscare naturală sau în uscător, în funcție de sortiment."],
+            ["03", "Verificare și sortare", "Cheresteaua este verificată și sortată înainte de pregătirea pentru livrare."],
+            ["04", "Finisare și ambalare", "Vopsire, marcare, ambalare și pachetizare pentru livrare."]
+          ] : [
+            ["01", "Impregnation", "Tanalith treatment protects timber against rot and insects."],
+            ["02", "Drying", "Air drying or kiln drying, depending on the product range."],
+            ["03", "Checking and grading", "Sawn timber is checked and graded before preparation for delivery."],
+            ["04", "Finishing and packing", "Painting, marking, packaging and bundling for delivery."]
+          ]).map(([number, step, detail]) => <article class="about-step"><span>{number}</span><h3>{step}</h3><p>{detail}</p></article>)}
+        </div>
+        <div class="about-filler-panel">
+          <div class="about-filler-heading"><p class="eyebrow">{ro ? "Încărcare în containere" : "Container loading"}</p><h3>{ro ? "Capacitate și utilizarea spațiului." : "Loading capacity and container space."}</h3></div>
+          <div>
+            <div class="about-filler-stats">
+              <article><strong>{ro ? "Până la 60 m³" : "Up to 60 m³"}</strong><p>{ro ? "de marfă în 10 minute" : "of cargo in 10 minutes"}</p></article>
+              <article><strong>{ro ? "Până la 84%" : "Up to 84%"}</strong><p>{ro ? "din spațiul containerului" : "of container space"}</p></article>
+              <article><strong>TÜV AUSTRIA</strong><p>{ro ? "serviciul de încărcare container este certificat" : "container loading service certified"}</p></article>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="about-video-section section--tight" aria-labelledby="about-video-title">
+        <div class="wrap">
+          <div class="about-video-feature">
+            <div class="about-video-copy">
+              <p class="eyebrow">{ro ? "În fluxul de prelucrare" : "Inside the processing line"}</p>
+              <div class="about-video-meta"><span>{ro ? "Prelucrarea cherestelei" : "Sawn timber processing"}</span><span>00:19</span></div>
+              <h2 id="about-video-title">{ro ? "Prelucrarea, văzută din interior." : "A look inside the processing line."}</h2>
+              <p>{ro ? "Un fragment filmat în timpul prelucrării: cheresteaua trece prin utilaj înainte de pregătirea pentru expediere." : "A short sequence filmed during processing, as sawn timber passes through the machinery before shipment preparation."}</p>
+              <a class="button button--light about-video-link" href={ro ? "/ro/proces/" : "/en/process/"}>{ro ? "Descoperă procesul complet" : "Explore the full process"}<span aria-hidden="true">↗</span></a>
+            </div>
+            <figure class="about-video-card">
+              <video controls playsinline preload="metadata" width="854" height="480" poster="/videos/whitewood-timber-poster.webp" aria-labelledby="about-video-title" aria-describedby="about-video-caption">
+                <source src="/videos/whitewood-timber.mp4" type="video/mp4" />
+                {ro ? "Browserul nu poate reda acest format. " : "Your browser cannot play this format. "}<a href="/videos/whitewood-timber.mp4">{ro ? "Deschide videoclipul." : "Open the video."}</a>
+              </video>
+              <figcaption id="about-video-caption"><span>{ro ? "Cherestea în fluxul de prelucrare" : "Sawn timber on the processing line"}</span><span>{ro ? "Filmări din activitatea WhiteWOOD" : "Footage from WhiteWOOD operations"}</span></figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+      <section class="about-export-section section--tight">
+        <div class="wrap">
+          <div class="about-export-header">
+            <div class="about-export-intro">
+              <p class="eyebrow">{ro ? "Export WhiteWOOD / 5 destinații" : "WhiteWOOD exports / 5 destinations"}</p>
+              <h2>{ro ? "Exportăm cherestea clienților noștri în:" : "We export sawn timber to our customers in:"}</h2>
+              <p class="about-export-promise">{ro ? "oferind " : "offering "}<strong>{ro ? "calitate ridicată" : "high quality"}</strong>{ro ? " și " : " and "}<strong>{ro ? "prețuri avantajoase" : "competitive prices"}</strong></p>
+            </div>
+            <p class="about-export-instruction">{ro ? "Explorează piețele de export ale WhiteWOOD." : "Explore WhiteWOOD’s export markets."}</p>
+          </div>
+          <ExportMarketsMap language={language} />
+          <div class="about-export-logistics">
+            <p>{ro ? "Depozitarea și logistica pentru expediții se desfășoară la Portul Constanța, Poarta 2." : "Storage and shipment logistics are based at Gate 2 of the Port of Constanța."}</p>
+            <a class="button" href={ro ? "/ro/contact/" : "/en/contact/"}>{ro ? "Contact pentru solicitări" : "Contact for enquiries"} <span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
+      </section>
+    </>
+  ) : type === "process" ? (
+    <>
+      <section class:list={["wrap process-hero", !mediaEnabled && "process-hero--text-only"]}>
+        <div class="process-hero-copy">
+          <p class="eyebrow">{ro ? "Procesare · pregătire · expediție" : "Processing · preparation · shipment"}</p>
+          <h1>{ro ? "Pregătirea cherestelei, de la tratament la container." : "Timber preparation, from treatment to container."}</h1>
+          <p class="lede">{ro ? "Cheresteaua trece prin etapele potrivite sortimentului și destinației sale: impregnare Tanalith, uscare, verificare, sortare, vopsire, marcare și ambalare. Container Filler este folosit la încărcarea în containere." : "Sawn timber passes through the stages suited to its grade and destination: Tanalith treatment, drying, checking, sorting, painting, marking and packaging. Container Filler is used for container loading."}</p>
+          <div class="process-hero-actions">
+            <a class="button" href="#etape">{ro ? "Vezi operațiunile" : "Explore the operations"}<span aria-hidden="true">↓</span></a>
+            <a class="button button--light" href={`/${language}/${ro ? "produse" : "products"}/`}>{ro ? "Vezi produsele" : "View products"}</a>
+          </div>
+          <div class="process-hero-facts">
+            <div><strong>{ro ? "Din 1996" : "Since 1996"}</strong><span>{ro ? "experiență în prelucrarea lemnului" : "experience in timber processing"}</span></div>
+            <div><strong>{ro ? "Poarta 2" : "Gate 2"}</strong><span>{ro ? "Portul Constanța · depozitare și logistică" : "Port of Constanța · storage and logistics"}</span></div>
+          </div>
+        </div>
+        {mediaEnabled && <figure class="process-hero-media"><Photo name="process-yard" alt={ro ? "Pachete de cherestea stivuite în curtea de lucru" : "Packs of sawn timber stacked in the work yard"} sizes="(max-width: 760px) 100vw, 52vw" loading="eager" fetchpriority="high" /><figcaption>{ro ? "Cherestea stivuită pentru pregătirea loturilor" : "Stacked timber for order preparation"}</figcaption></figure>}
+      </section>
+
+      <section id="etape" class="wrap section process-operations">
+        <div class="section-heading">
+          <div><p class="eyebrow">{ro ? "Pregătirea cherestelei" : "Timber preparation"}</p><h2>{ro ? "Fiecare lot, gata de expediere." : "Every lot, ready for shipment."}</h2></div>
+          <p class="lede">{ro ? "În funcție de sortiment, cheresteaua este tratată, uscată, verificată și sortată, apoi vopsită, marcată și ambalată pentru transport." : "Depending on the grade, timber is treated, dried, checked and sorted, then painted, marked and packaged for transport."}</p>
+        </div>
+        <div class="process-card-grid">
+          {processSteps.map(([number, step, detail]) => <article class="process-card"><p class="process-card-number">{number}<span>/ 06</span></p><h3>{step}</h3><p>{detail}</p></article>)}
+        </div>
+      </section>
+
+      <section id="container-filler" class="process-filler-section">
+        <div class="wrap process-filler-layout">
+          {mediaEnabled && <figure class="process-filler-media"><Photo name="container-loading" alt={ro ? "Instalația Container Filler pentru încărcarea cherestelei în container" : "Container Filler system for loading sawn timber into a container"} sizes="(max-width: 760px) 100vw, 48vw" /><figcaption>{ro ? "Echipament Container Filler · Portul Constanța" : "Container Filler equipment · Port of Constanța"}</figcaption></figure>}
+          <div class="process-filler-copy">
+            <p class="eyebrow">{ro ? "Încărcare specializată" : "Specialized loading"}</p>
+            <h2>{ro ? "Container Filler: încărcare rapidă și utilizare eficientă a spațiului." : "Container Filler: fast loading and efficient use of space."}</h2>
+            <p>{ro ? "Container Filler încarcă cheresteaua în containere, cu o utilizare eficientă a spațiului disponibil." : "Container Filler loads sawn timber into containers while making efficient use of the available space."}</p>
+            <div class="process-filler-stats">
+              <article><strong>{ro ? "Până la 60 m³" : "Up to 60 m³"}</strong><p>{ro ? "de marfă în 10 minute" : "of cargo in 10 minutes"}</p></article>
+              <article><strong>{ro ? "Până la 84%" : "Up to 84%"}</strong><p>{ro ? "din spațiul containerului" : "of container space"}</p></article>
+              <article><strong>TÜV</strong><p>{ro ? "certificare TÜV AUSTRIA" : "TÜV AUSTRIA certification"}</p></article>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="wrap process-location section--tight">
+        <div class="process-location-copy"><p class="eyebrow">{ro ? "Depozitare și logistică" : "Storage and logistics"}</p><h2>{ro ? "Portul Constanța · Poarta 2" : "Port of Constanța · Gate 2"}</h2><p class="muted">{ro ? "Portul Constanța, Poarta 2, găzduiește depozitele și operațiunile logistice WhiteWOOD pentru expedierea cherestelei." : "Gate 2 of the Port of Constanța is home to WhiteWOOD’s timber storage and logistics operations."}</p></div>
+        <div class="process-location-actions"><a class="button button--light" href={`/${language}/contact/#contact-locations`}>{ro ? "Vezi locația" : "View location"}</a><a class="button" href={`/${language}/contact/#quote`}>{ro ? "Solicită o ofertă" : "Request a quote"}<span aria-hidden="true">↗</span></a></div>
+      </section>
+    </>
+  ) : type === "contact" ? (
+    <section class="wrap section">
+      <div class="contact-grid">
+        <div class="contact-side">
+          <p class="eyebrow">{ro ? "Contact / Ofertă" : "Contact / Quote"}</p>
+          <h1>{ro ? "Contactează WhiteWOOD." : "Contact WhiteWOOD."}</h1>
+          <p>{ro ? "Echipa WhiteWOOD te ajută cu informații despre sortimente și oferte pentru volumul și destinația proiectului tău." : "The WhiteWOOD team can help with timber grades and a quote for your project’s volume and destination."}</p>
+          <dl class="contact-details">
+            <div><dt>{ro ? "Telefon" : "Phone"}</dt><dd><a href="tel:+40722279481">(+4) 0722.279.481</a></dd></div>
+            <div><dt>E-mail</dt><dd><a href="mailto:office@whitewoodtrading.com">office@whitewoodtrading.com</a><a href="mailto:office.whitewood@gmail.com">office.whitewood@gmail.com</a></dd></div>
+          </dl>
+          <a class="contact-location-link" href="#contact-locations">{ro ? "Vezi sediul și punctul logistic" : "View the office and logistics location"}<span aria-hidden="true">↓</span></a>
+          {formSuccess && <div class="admin-flash" role="status">{ro ? "Mulțumim! Solicitarea ta a fost înregistrată." : "Thank you! Your enquiry has been received."}</div>}
+        </div>
+          {formEnabled && <div id="quote"><RequestForm language={language} products={products} enabled={formEnabled} /></div>}
+      </div>
+      <ContactMaps language={language} />
+    </section>
+  ) : type === "articles" ? (
+    <section class="wrap section">
+      <div class="section-heading">
+        <div><p class="eyebrow">{ro ? "Idei despre lemn" : "Timber insights"}</p><h1>{ro ? "Articole WhiteWOOD" : "WhiteWOOD articles"}</h1></div>
+        <div><p class="lede">{ro ? "Materiale despre cherestea, utilizările lemnului și aplicațiile sale în construcții și industrie." : "Articles on sawn timber, the uses of wood and its applications in construction and industry."}<WoodMotif /></p></div>
+      </div>
+      {articles.length > 0 && <div class="article-list">{articles.map((article) => {
+        const dateLabel = article.date ? new Date(article.date + "T12:00:00Z").toLocaleDateString(ro ? "ro-RO" : "en-GB", { day: "numeric", month: "long", year: "numeric" }) : "";
+        return <article class="article-row">
+          <div><p class="article-date">{ro ? "Din arhivă" : "From the archive"}{dateLabel ? " · " + dateLabel : ""}</p><h2><a href={"/" + language + "/" + (ro ? "articole" : "articles") + "/" + article.slug + "/"}>{article.title}</a></h2><p>{article.excerpt}</p></div>
+          <a class="article-view" href={"/" + language + "/" + (ro ? "articole" : "articles") + "/" + article.slug + "/"} aria-label={ro ? "Citește articolul" : "Read article"}>↗</a>
+        </article>;
+      })}</div>}
+    </section>
+  ) : type === "privacy" || type === "cookies" ? (
+    <section class="wrap section legal-page">
+      <div class="page-hero"><div><p class="eyebrow">{ro ? "Informații importante" : "Important information"}</p><h1>{type === "privacy" ? (ro ? "Protecția datelor" : "Privacy") : (ro ? "Politica de cookie" : "Cookie policy")}</h1></div><div><p class="lede">{page?.intro}</p><p class="legal-copy">{page?.body}</p><a class="text-link" href={policyUrl} target="_blank" rel="noreferrer">{type === "privacy" ? (ro ? "Citește informarea completă privind protecția datelor" : "Read the full privacy notice (Romanian)") : (ro ? "Politica Google de confidențialitate" : "Google Privacy Policy (Romanian)")} ↗</a></div></div>
+    </section>
+  ) : (
+    <NotFoundPanel
+      language={language}
+      title={ro ? "Pagina nu a fost găsită" : "Page not found"}
+      description={ro ? "Nu am găsit pagina pe care o cauți. Revino la pagina principală sau explorează sortimentele WhiteWOOD." : "We couldn’t find the page you’re looking for. Return home or explore WhiteWOOD’s timber range."}
+      primaryHref={ro ? "/ro/" : "/en/"}
+      primaryLabel={ro ? "Acasă" : "Home"}
+      secondaryHref={ro ? "/ro/produse/" : "/en/products/"}
+      secondaryLabel={ro ? "Vezi catalogul" : "View catalogue"}
+    />
+  )}
+</SiteLayout>

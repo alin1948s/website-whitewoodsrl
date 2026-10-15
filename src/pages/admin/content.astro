@@ -1,0 +1,119 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { countAdminUsers, getAdminSession } from "../../lib/auth";
+import { getAppMode, getDatabase } from "../../lib/db";
+export const prerender = false;
+const db = getDatabase();
+if (await countAdminUsers(db) === 0) return Astro.redirect("/admin/setup/");
+const session = await getAdminSession(db, Astro.request);
+if (!session) return Astro.redirect("/admin/login/");
+const mode = getAppMode();
+const pages = await db.prepare("SELECT * FROM content_pages ORDER BY slug,language").all<{
+  id: string; slug: string; language: string; title: string; intro: string | null; body: string | null; seo_title: string | null; seo_description: string | null; status: string; requires_review: number; is_demo: number;
+}>();
+const articles = await db.prepare("SELECT * FROM articles ORDER BY COALESCE(source_date,published_at) DESC,title_ro").all<{
+  id: string; slug_ro: string; slug_en: string; title_ro: string; title_en: string; excerpt_ro: string | null; excerpt_en: string | null; body_ro: string | null; body_en: string | null;
+  source_url_ro: string | null; source_url_en: string | null; source_date: string | null; published_at: string | null; seo_title_ro: string | null; seo_title_en: string | null;
+  seo_description_ro: string | null; seo_description_en: string | null; status: string; requires_review: number; is_demo: number;
+}>();
+const assets = await db.prepare(`SELECT a.*,COALESCE(group_concat(l.target_type || ':' || l.target_id, char(10)), '') AS associations
+  FROM assets a LEFT JOIN content_asset_links l ON l.asset_id=a.id GROUP BY a.id ORDER BY a.path`).all<{
+  id: string; path: string; original_path: string; source_url: string | null; alt_ro: string | null; alt_en: string | null; media_type: string; width: number | null; height: number | null;
+  bytes: number | null; rights_status: string; status: string; is_demo: number; associations: string;
+}>();
+const translations = await db.prepare("SELECT * FROM translations ORDER BY translation_key,language").all<{
+  id: string; translation_key: string; language: string; value: string; approval_status: string;
+}>();
+const saved = Astro.url.searchParams.get("saved") === "1";
+---
+
+<AdminLayout title="Conținut și asset-uri" session={session} mode={mode}>
+  {saved && <p class="admin-flash">Modificările au fost salvate.</p>}
+  <p class="muted">Pagini/articole publicate cu marcaj de revizie rămân ascunse în producție. Asset-urile apar public numai când starea și drepturile sunt aprobate.</p>
+
+  <section id="pages" class="admin-panel"><h3>Pagini RO / EN</h3>
+    <div class="admin-form-list">
+      {(pages.results ?? []).map((page) => (
+        <details class="admin-edit"><summary>{page.slug} · {page.language.toUpperCase()} · {page.status}{page.requires_review === 1 ? " · necesită revizie" : ""}{page.is_demo === 1 ? " · demo" : ""}</summary>
+          <form method="post" action="/api/admin/content/">
+            <input type="hidden" name="action" value="save-page" /><input type="hidden" name="csrf" value={session.csrf} /><input type="hidden" name="id" value={page.id} />
+            <div class="admin-edit-grid">
+              <div class="field"><label>Slug</label><input name="slug" value={page.slug} required /></div>
+              <div class="field"><label>Language</label><select name="language"><option value="ro" selected={page.language === "ro"}>Română</option><option value="en" selected={page.language === "en"}>English</option></select></div>
+              <div class="field field--wide"><label>Titlu</label><input name="title" value={page.title} required maxlength="180" /></div>
+              <div class="field field--wide"><label>Introducere</label><textarea name="intro">{page.intro}</textarea></div>
+              <div class="field field--wide"><label>Conținut text simplu</label><textarea name="body" maxlength="12000">{page.body}</textarea></div>
+              <div class="field"><label>Titlu SEO</label><input name="seo_title" value={page.seo_title} maxlength="180" /></div>
+              <div class="field"><label>Descriere SEO</label><textarea name="seo_description" maxlength="300">{page.seo_description}</textarea></div>
+              <div class="field"><label>Stare</label><select name="status"><option value="draft" selected={page.status === "draft"}>Draft</option><option value="published" selected={page.status === "published"}>Publicat</option><option value="archived" selected={page.status === "archived"}>Arhivat</option></select></div>
+              <label class="checkbox-row"><input type="checkbox" name="requires_review" value="1" checked={page.requires_review === 1} /><span>Necesită reconfirmare</span></label>
+            </div>
+            <div class="admin-actions"><button class="button button--small" type="submit">Salvează pagina</button></div>
+          </form>
+        </details>
+      ))}
+    </div>
+    <details class="admin-edit admin-edit--spaced"><summary>Adaugă pagină</summary>
+      <form method="post" action="/api/admin/content/">
+        <input type="hidden" name="action" value="save-page" /><input type="hidden" name="csrf" value={session.csrf} />
+        <div class="admin-edit-grid"><div class="field"><label>Slug</label><input name="slug" required /></div><div class="field"><label>Language</label><select name="language"><option value="ro">Română</option><option value="en">English</option></select></div>
+          <div class="field field--wide"><label>Titlu</label><input name="title" required /></div><div class="field field--wide"><label>Introducere</label><textarea name="intro"></textarea></div><div class="field field--wide"><label>Conținut text simplu</label><textarea name="body"></textarea></div>
+          <div class="field"><label>Titlu SEO</label><input name="seo_title" /></div><div class="field"><label>Descriere SEO</label><textarea name="seo_description"></textarea></div>
+          <div class="field"><label>Stare</label><select name="status"><option value="draft">Draft</option><option value="published">Publicat</option><option value="archived">Arhivat</option></select></div><label class="checkbox-row"><input type="checkbox" name="requires_review" value="1" checked /><span>Necesită reconfirmare</span></label>
+        </div><div class="admin-actions"><button class="button button--small" type="submit">Creează draft</button></div>
+      </form>
+    </details>
+  </section>
+
+  <section id="articles" class="admin-panel admin-panel--spaced"><h3>Articole bilingve</h3>
+    <p class="muted">Cele trei articole arhivate sunt păstrate ca drafturi. Conținutul complet nu a fost copiat înainte de revizia editorială.</p>
+    <div class="admin-form-list">
+      {(articles.results ?? []).map((article) => (
+        <details class="admin-edit"><summary>{article.title_ro} · {article.source_date || "dată neconfirmată"} · {article.status}{article.requires_review === 1 ? " · necesită revizie" : ""}</summary>
+          <form method="post" action="/api/admin/content/">
+            <input type="hidden" name="action" value="save-article" /><input type="hidden" name="csrf" value={session.csrf} /><input type="hidden" name="id" value={article.id} />
+            <div class="admin-edit-grid">
+              <div class="field"><label>Slug RO</label><input name="slug_ro" value={article.slug_ro} required /></div><div class="field"><label>Slug EN</label><input name="slug_en" value={article.slug_en} required /></div>
+              <div class="field"><label>Titlu RO</label><input name="title_ro" value={article.title_ro} required /></div><div class="field"><label>Title EN</label><input name="title_en" value={article.title_en} required /></div>
+              <div class="field"><label>Descriere RO</label><textarea name="excerpt_ro">{article.excerpt_ro}</textarea></div><div class="field"><label>Excerpt EN</label><textarea name="excerpt_en">{article.excerpt_en}</textarea></div>
+              <div class="field"><label>Corp RO</label><textarea name="body_ro" maxlength="16000">{article.body_ro}</textarea></div><div class="field"><label>Body EN</label><textarea name="body_en" maxlength="16000">{article.body_en}</textarea></div>
+              <div class="field"><label>URL sursă RO</label><input name="source_url_ro" value={article.source_url_ro} /></div><div class="field"><label>Source URL EN</label><input name="source_url_en" value={article.source_url_en} /></div>
+              <div class="field"><label>Data sursei</label><input name="source_date" type="date" value={article.source_date} /></div><div class="field"><label>Data publicării</label><input name="published_at" type="date" value={article.published_at} /></div>
+              <div class="field"><label>SEO titlu RO</label><input name="seo_title_ro" value={article.seo_title_ro} /></div><div class="field"><label>SEO title EN</label><input name="seo_title_en" value={article.seo_title_en} /></div>
+              <div class="field"><label>SEO descriere RO</label><textarea name="seo_description_ro">{article.seo_description_ro}</textarea></div><div class="field"><label>SEO description EN</label><textarea name="seo_description_en">{article.seo_description_en}</textarea></div>
+              <div class="field"><label>Stare</label><select name="status"><option value="draft" selected={article.status === "draft"}>Draft</option><option value="published" selected={article.status === "published"}>Publicat</option><option value="archived" selected={article.status === "archived"}>Arhivat</option></select></div>
+              <label class="checkbox-row"><input type="checkbox" name="requires_review" value="1" checked={article.requires_review === 1} /><span>Necesită revizie</span></label>
+            </div><div class="admin-actions"><button class="button button--small" type="submit">Salvează articolul</button>{article.is_demo === 1 && <span class="admin-status">DEMO</span>}</div>
+          </form>
+        </details>
+      ))}
+    </div>
+    <details class="admin-edit admin-edit--spaced"><summary>Adaugă articol</summary>
+      <form method="post" action="/api/admin/content/">
+        <input type="hidden" name="action" value="save-article" /><input type="hidden" name="csrf" value={session.csrf} />
+        <div class="admin-edit-grid"><div class="field"><label>Slug RO</label><input name="slug_ro" required /></div><div class="field"><label>Slug EN</label><input name="slug_en" required /></div><div class="field"><label>Titlu RO</label><input name="title_ro" required /></div><div class="field"><label>Title EN</label><input name="title_en" required /></div>
+          <div class="field"><label>Rezumat RO</label><textarea name="excerpt_ro"></textarea></div><div class="field"><label>Excerpt EN</label><textarea name="excerpt_en"></textarea></div><div class="field"><label>Corp RO</label><textarea name="body_ro"></textarea></div><div class="field"><label>Body EN</label><textarea name="body_en"></textarea></div>
+          <div class="field"><label>URL sursă RO</label><input name="source_url_ro" /></div><div class="field"><label>Source URL EN</label><input name="source_url_en" /></div><div class="field"><label>Stare</label><select name="status"><option value="draft">Draft</option><option value="published">Publicat</option><option value="archived">Arhivat</option></select></div><label class="checkbox-row"><input type="checkbox" name="requires_review" value="1" checked /><span>Necesită revizie</span></label>
+        </div><div class="admin-actions"><button class="button button--small" type="submit">Creează draft</button></div>
+      </form>
+    </details>
+  </section>
+
+  <section id="translations" class="admin-panel admin-panel--spaced"><h3>Traduceri RO / EN</h3>
+    <div class="admin-form-list">{(translations.results ?? []).map((translation) => <details class="admin-edit"><summary>{translation.translation_key} · {translation.language}</summary><form method="post" action="/api/admin/content/"><input type="hidden" name="action" value="save-translation" /><input type="hidden" name="csrf" value={session.csrf} /><input type="hidden" name="id" value={translation.id} /><div class="admin-edit-grid"><div class="field"><label>Cheie</label><input name="translation_key" value={translation.translation_key} required /></div><div class="field"><label>Language</label><select name="language"><option value="ro" selected={translation.language === "ro"}>Română</option><option value="en" selected={translation.language === "en"}>English</option></select></div><div class="field field--wide"><label>Text</label><textarea name="value" required>{translation.value}</textarea></div><div class="field"><label>Aprobare</label><select name="approval_status"><option value="needs_review" selected={translation.approval_status === "needs_review"}>Necesită revizie</option><option value="approved" selected={translation.approval_status === "approved"}>Aprobată</option></select></div></div><div class="admin-actions"><button class="button button--small" type="submit">Salvează traducerea</button></div></form></details>)}</div>
+    <details class="admin-edit admin-edit--spaced"><summary>Adaugă traducere</summary><form method="post" action="/api/admin/content/"><input type="hidden" name="action" value="save-translation" /><input type="hidden" name="csrf" value={session.csrf} /><div class="admin-edit-grid"><div class="field"><label>Cheie</label><input name="translation_key" required /></div><div class="field"><label>Language</label><select name="language"><option value="ro">Română</option><option value="en">English</option></select></div><div class="field field--wide"><label>Text</label><textarea name="value" required></textarea></div><div class="field"><label>Aprobare</label><select name="approval_status"><option value="needs_review">Necesită revizie</option><option value="approved">Aprobată</option></select></div></div><div class="admin-actions"><button class="button button--small" type="submit">Creează traducere</button></div></form></details>
+  </section>
+
+  <section id="assets" class="admin-panel admin-panel--spaced"><h3>Bibliotecă media ({assets.results?.length ?? 0})</h3>
+    <p class="muted">Sunt păstrate toate variantele găsite pe site-ul public. Pentru publicare trebuie aprobate atât drepturile, cât și starea asset-ului. Asocieri: o linie per tip:id.</p>
+    <div class="admin-form-list">{(assets.results ?? []).map((asset) => <details class="admin-edit"><summary><span class="asset-row">{asset.path}</span> · {asset.status} / {asset.rights_status}</summary>
+      <form method="post" action="/api/admin/content/"><input type="hidden" name="action" value="save-asset" /><input type="hidden" name="csrf" value={session.csrf} /><input type="hidden" name="id" value={asset.id} />
+        <div class="admin-edit-grid"><div class="field field--wide"><label>Cale servită</label><input value={asset.path} readonly /></div><div class="field"><label>Alt RO</label><input name="alt_ro" value={asset.alt_ro} maxlength="240" /></div><div class="field"><label>Alt EN</label><input name="alt_en" value={asset.alt_en} maxlength="240" /></div>
+          <div class="field"><label>Stare asset</label><select name="status"><option value="needs_review" selected={asset.status === "needs_review"}>Necesită revizie</option><option value="approved" selected={asset.status === "approved"}>Aprobat</option><option value="archived" selected={asset.status === "archived"}>Arhivat</option></select></div>
+          <div class="field"><label>Drepturi</label><select name="rights_status"><option value="needs_confirmation" selected={asset.rights_status === "needs_confirmation"}>De confirmat</option><option value="approved" selected={asset.rights_status === "approved"}>Aprobate</option><option value="rejected" selected={asset.rights_status === "rejected"}>Refuzate</option></select></div>
+          <div class="field field--wide"><label>Asocieri existente (tip:id)</label><textarea name="associations">{asset.associations}</textarea><small>Exemple: product:product-beech sau page:page-process-ro</small></div>
+        </div><div class="admin-actions"><button class="button button--small" type="submit">Salvează asset-ul</button><span class="muted">{asset.width || "—"} × {asset.height || "—"} · {asset.bytes ? `${(asset.bytes / 1024).toFixed(1)} KB` : "mărime necunoscută"}{asset.is_demo === 1 ? " · demo" : ""}</span></div>
+      </form>
+    </details>)}</div>
+  </section>
+</AdminLayout>

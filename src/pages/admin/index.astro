@@ -1,0 +1,36 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { countAdminUsers, getAdminSession } from "../../lib/auth";
+import { getAppMode, getDatabase } from "../../lib/db";
+export const prerender = false;
+const db = getDatabase();
+if (await countAdminUsers(db) === 0) return Astro.redirect("/admin/setup/");
+const session = await getAdminSession(db, Astro.request);
+if (!session) return Astro.redirect("/admin/login/");
+const mode = getAppMode();
+const counts = await Promise.all([
+  db.prepare("SELECT COUNT(*) AS count FROM products WHERE status='published'").first<{ count: number }>(),
+  db.prepare("SELECT COUNT(*) AS count FROM content_pages WHERE status='draft' OR requires_review=1").first<{ count: number }>(),
+  db.prepare("SELECT COUNT(*) AS count FROM articles WHERE status='draft' OR requires_review=1").first<{ count: number }>(),
+  db.prepare("SELECT COUNT(*) AS count FROM quote_requests WHERE status='new'").first<{ count: number }>(),
+  db.prepare("SELECT COUNT(*) AS count FROM assets WHERE status='needs_review' OR rights_status='needs_confirmation'").first<{ count: number }>()
+]);
+const audit = await db.prepare(`SELECT a.created_at,a.entity_type,a.action,a.summary,u.email FROM audit_log a LEFT JOIN admin_users u ON u.id=a.admin_id ORDER BY a.created_at DESC LIMIT 12`).all<{ created_at: string; entity_type: string; action: string; summary: string; email: string | null }>();
+const saved = Astro.url.searchParams.get("setup") === "1";
+---
+
+<AdminLayout title="Panou" session={session} mode={mode}>
+  {saved && <p class="admin-flash">Contul admin a fost creat.</p>}
+  <div class="admin-grid">
+    <section class="admin-panel"><p class="eyebrow">Catalog</p><div class="admin-count">{counts[0]?.count ?? 0}</div><p class="muted">Produse publicate</p><a href="/admin/products/">Gestionează produsele ↗</a></section>
+    <section class="admin-panel"><p class="eyebrow">Revizie</p><div class="admin-count">{(counts[1]?.count ?? 0) + (counts[2]?.count ?? 0)}</div><p class="muted">Pagini și articole de revizuit</p><a href="/admin/content/">Deschide conținutul ↗</a></section>
+    <section class="admin-panel"><p class="eyebrow">Cereri noi</p><div class="admin-count">{counts[3]?.count ?? 0}</div><p class="muted">Solicitări de ofertă</p><a href="/admin/requests/">Vezi cererile ↗</a></section>
+  </div>
+  <section class="admin-panel admin-panel--spaced"><h3>Asset-uri de revizuit</h3><p>În așteptarea aprobării: <strong>{counts[4]?.count ?? 0}</strong>. Copiile locale provin din site-ul public și au nevoie de confirmarea drepturilor și a textului alternativ.</p><a href="/admin/content/#assets">Deschide biblioteca ↗</a></section>
+  <section class="admin-panel admin-panel--spaced"><h3>Jurnal de modificări</h3>
+    <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Data</th><th>Tip</th><th>Acțiune</th><th>Detaliu</th><th>Admin</th></tr></thead><tbody>
+      {(audit.results ?? []).map((entry) => <tr><td>{entry.created_at}</td><td>{entry.entity_type}</td><td>{entry.action}</td><td>{entry.summary}</td><td>{entry.email || "—"}</td></tr>)}
+      {!(audit.results?.length) && <tr><td colspan="5">Jurnalul nu are încă intrări.</td></tr>}
+    </tbody></table></div>
+  </section>
+</AdminLayout>

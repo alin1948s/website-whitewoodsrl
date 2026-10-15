@@ -1,0 +1,53 @@
+---
+import { getAppMode, getDatabase, mediaIsAllowed } from "../lib/db";
+import type { SiteLanguage } from "../lib/language";
+import { getPublishedProducts } from "../lib/repositories";
+import Photo from "./Photo.astro";
+import SiteLayout from "../layouts/SiteLayout.astro";
+
+const { language } = Astro.props as { language: SiteLanguage };
+const mode = getAppMode();
+const products = await getPublishedProducts(getDatabase(), language, mode);
+const mediaEnabled = mediaIsAllowed();
+const ro = language === "ro";
+const alternateHref = ro ? "/en/products/" : "/ro/produse/";
+const description = ro
+  ? "Fag clasa A și A/B, frasin clasa A, molid clasa A și lemn uscat, rindeluit pe patru fețe, pentru ambalaje."
+  : "Grade A and A/B beech, grade A ash and spruce, and dried, four-side planed timber for packaging.";
+---
+
+<SiteLayout language={language} title={ro ? "Produse | WhiteWOOD" : "Products | WhiteWOOD"} description={description} alternateHref={alternateHref}>
+  <section class="wrap page-hero">
+    <div>
+      <p class="eyebrow">{ro ? "Catalog WhiteWOOD" : "WhiteWOOD catalogue"}</p>
+      <h1>{ro ? "Specii și sortimente." : "Species and grades."}</h1>
+    </div>
+    <div>
+      <p class="lede">{description}</p>
+    </div>
+  </section>
+  <section class="wrap section--tight">
+    {products.length ? (
+      <div class="product-index">
+        {products.map((product) => (
+          <a class="product-row" href={`${ro ? "/ro/produse" : "/en/products"}/${product.slug}/`}>
+          <div><h3>{product.title}</h3><p>{product.species || (ro ? "Lemn uscat și rindeluit pe patru fețe" : "Dried, four-side planed wood")}</p></div>
+            <p>{product.intro}</p>
+            <span class="product-arrow" aria-hidden="true">↗</span>
+          </a>
+        ))}
+      </div>
+    ) : null}
+    {mediaEnabled && <div class="product-image-grid" aria-label={ro ? "Fotografii din catalogul WhiteWOOD" : "WhiteWOOD catalogue photography"}>
+      <figure><Photo name="product-beech" alt={ro ? "Cherestea de fag stivuită" : "Stacks of beech sawn timber"} sizes="(max-width: 760px) 100vw, 38vw" /><figcaption>{ro ? "Fag" : "Beech"}</figcaption></figure>
+      <figure><Photo name="product-ash" alt={ro ? "Cherestea de frasin tăiată și stivuită" : "Cut and stacked ash timber"} sizes="(max-width: 760px) 100vw, 30vw" /><figcaption>{ro ? "Frasin" : "Ash"}</figcaption></figure>
+      <figure><Photo name="product-softwood" alt={ro ? "Cherestea de rășinoase rindeluită" : "Planed softwood timber"} sizes="(max-width: 760px) 100vw, 32vw" /><figcaption>{ro ? "Rășinoase" : "Softwood"}</figcaption></figure>
+      <figure><Photo name="product-packaging" alt={ro ? "Ambalaje realizate din lemn" : "Wooden packaging"} sizes="(max-width: 760px) 100vw, 32vw" /><figcaption>{ro ? "Ambalaje" : "Packaging"}</figcaption></figure>
+    </div>}
+  </section>
+  <section class="wrap quote-band">
+    <div><p class="eyebrow">{ro ? "Pentru proiectul tău" : "For your project"}</p><h2>{ro ? "Găsim sortimentul potrivit." : "Find the right timber grade."}</h2></div>
+    <p>{ro ? "Spune-ne ce specie și ce dimensiuni cauți. Îți pregătim o ofertă în funcție de volum și destinație." : "Tell us which species and dimensions you need. We’ll prepare a quote based on your volume and destination."}</p>
+    <a class="button" href={`/${language}/contact/#quote`}>{ro ? "Solicită o ofertă" : "Request a quote"}<span aria-hidden="true">↗</span></a>
+  </section>
+</SiteLayout>

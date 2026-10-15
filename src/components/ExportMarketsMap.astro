@@ -1,0 +1,174 @@
+---
+import type { SiteLanguage } from "../lib/language";
+
+const { language } = Astro.props as { language: SiteLanguage };
+const ro = language === "ro";
+
+const markets = ro ? [
+  { id: "jordan", name: "Iordania", region: "Orientul Mijlociu", x: 21.5, y: 41.5 },
+  { id: "pakistan", name: "Pakistan", region: "Asia de Sud", x: 53, y: 49 },
+  { id: "india", name: "India", region: "Asia de Sud", x: 65.5, y: 62 },
+  { id: "uae", name: "Emiratele Arabe Unite", region: "Orientul Mijlociu", x: 40, y: 59 },
+  { id: "iran", name: "Iran", region: "Orientul Mijlociu", x: 41, y: 39 }
+] : [
+  { id: "jordan", name: "Jordan", region: "Middle East", x: 21.5, y: 41.5 },
+  { id: "pakistan", name: "Pakistan", region: "South Asia", x: 53, y: 49 },
+  { id: "india", name: "India", region: "South Asia", x: 65.5, y: 62 },
+  { id: "uae", name: "United Arab Emirates", region: "Middle East", x: 40, y: 59 },
+  { id: "iran", name: "Iran", region: "Middle East", x: 41, y: 39 }
+];
+
+const initialMarket = markets[0];
+---
+
+<section class="export-atlas" data-export-atlas data-language={language} aria-label={ro ? "Hartă interactivă a destinațiilor de export WhiteWOOD" : "Interactive map of WhiteWOOD export destinations"}>
+  <figure class="export-atlas-map-card">
+    <div class="export-atlas-map-topline">
+      <span>{ro ? "WHITEWOOD / PIEȚE DE EXPORT" : "WHITEWOOD / EXPORT MARKETS"}</span>
+      <span class="export-atlas-live"><span aria-hidden="true"></span>{ro ? "5 destinații" : "5 destinations"}</span>
+    </div>
+    <div class="export-atlas-map" role="group" aria-label={ro ? "Selectează o destinație de pe hartă" : "Select a destination on the map"}>
+      <img src="/brand/whitewood-export-markets.svg" alt={ro ? "Regiunea Orientului Mijlociu și a Asiei de Sud; destinațiile WhiteWOOD sunt colorate în verde" : "The Middle East and South Asia region; WhiteWOOD destinations are highlighted in green"} width="720" height="400" loading="lazy" decoding="async" />
+      {markets.map((market, index) => (
+        <button
+          class:list={["export-atlas-pin", index === 0 && "is-active"]}
+          type="button"
+          data-market-select={market.id}
+          data-market-name={market.name}
+          data-market-region={market.region}
+          style={`--pin-x:${market.x}%;--pin-y:${market.y}%;`}
+          aria-label={`${ro ? "Selectează" : "Select"} ${market.name}`}
+          aria-pressed={index === 0 ? "true" : "false"}
+          title={market.name}
+        >
+          <span>{String(index + 1).padStart(2, "0")}</span>
+        </button>
+      ))}
+    </div>
+    <figcaption>
+      <span class="export-atlas-legend" aria-hidden="true"></span>
+      <span>{ro ? "Destinații pentru exportul de cherestea" : "Sawn timber export destinations"}</span>
+      <span class="export-atlas-caption-note">{ro ? "Numerele corespund destinațiilor din listă" : "Numbers match the destinations in the list"}</span>
+    </figcaption>
+  </figure>
+
+  <aside class="export-atlas-panel" aria-label={ro ? "Detalii despre destinațiile de export" : "Export destination details"}>
+    <div class="export-atlas-selected" aria-live="polite" aria-atomic="true">
+      <p class="eyebrow">{ro ? "Destinația selectată" : "Selected destination"}</p>
+      <div class="export-atlas-current">
+        <span data-market-index>01</span><span class="export-atlas-current-rule" aria-hidden="true"></span><span data-market-region>{initialMarket?.region}</span>
+      </div>
+      <h3 data-market-title>{initialMarket?.name}</h3>
+      <p>{ro ? "Cheresteaua WhiteWOOD este exportată către această destinație." : "WhiteWOOD sawn timber is exported to this destination."}</p>
+    </div>
+
+    <div class="export-atlas-list" role="group" aria-label={ro ? "Alege una dintre cele cinci destinații" : "Choose one of the five destinations"}>
+      {markets.map((market, index) => (
+        <button
+          class:list={["export-atlas-market", index === 0 && "is-active"]}
+          type="button"
+          data-market-select={market.id}
+          data-market-name={market.name}
+          data-market-region={market.region}
+          aria-pressed={index === 0 ? "true" : "false"}
+        >
+          <span class="export-atlas-market-number">{String(index + 1).padStart(2, "0")}</span>
+          <span class="export-atlas-market-copy"><strong>{market.name}</strong><span>{market.region}</span></span>
+          <span class="export-atlas-market-arrow" aria-hidden="true">↗</span>
+        </button>
+      ))}
+    </div>
+  </aside>
+</section>
+
+<script>
+  document.querySelectorAll<HTMLElement>("[data-export-atlas]").forEach((atlas) => {
+    const selectors = [...atlas.querySelectorAll<HTMLButtonElement>("[data-market-select]")];
+    const title = atlas.querySelector<HTMLElement>("[data-market-title]");
+    const region = atlas.querySelector<HTMLElement>("[data-market-region]:not(button)");
+    const index = atlas.querySelector<HTMLElement>("[data-market-index]");
+
+    const selectMarket = (selected: HTMLButtonElement) => {
+      const marketId = selected.dataset.marketSelect;
+      if (!marketId) return;
+
+      selectors.forEach((button) => {
+        const active = button.dataset.marketSelect === marketId;
+        button.classList.toggle("is-active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+
+      if (title) title.textContent = selected.dataset.marketName || "";
+      if (region) region.textContent = selected.dataset.marketRegion || "";
+      if (index) {
+        const marketButtons = selectors.filter((button) => button.classList.contains("export-atlas-market"));
+        const selectedIndex = marketButtons.findIndex((button) => button.dataset.marketSelect === marketId);
+        index.textContent = String(selectedIndex + 1).padStart(2, "0");
+      }
+    };
+
+    selectors.forEach((button) => button.addEventListener("click", () => selectMarket(button)));
+  });
+</script>
+
+<style>
+  .export-atlas { display: grid; grid-template-columns: minmax(0, 1.42fr) minmax(19rem, .78fr); gap: clamp(1rem, 2.2vw, 1.75rem); width: min(100%, 1180px); margin-inline: auto; padding: clamp(.7rem, 1.4vw, 1rem); border: 1px solid #d9d8d0; background: #fbfaf6; box-shadow: 0 18px 50px #20231f0d; }
+  .export-atlas-map-card { display: grid; align-content: start; min-width: 0; margin: 0; padding: clamp(.7rem, 1.35vw, 1.1rem); background: #f2f0e9; }
+  .export-atlas-map-topline { display: flex; justify-content: space-between; align-items: center; gap: .8rem; margin-bottom: .75rem; color: var(--forest, #284f41); font: 700 .66rem/1.4 var(--sans, sans-serif); letter-spacing: .12em; }
+  .export-atlas-live { display: inline-flex; align-items: center; gap: .45rem; color: #748179; font-size: .65rem; letter-spacing: .06em; white-space: nowrap; }
+  .export-atlas-live > span { width: .48rem; aspect-ratio: 1; border-radius: 50%; background: #a96f42; box-shadow: 0 0 0 3px #a96f421c; }
+  .export-atlas-map { position: relative; isolation: isolate; width: 100%; aspect-ratio: 720 / 400; overflow: hidden; background: #f7f5ef; }
+  .export-atlas-map > img { display: block; width: 100%; height: 100%; object-fit: contain; }
+  .export-atlas-pin { position: absolute; z-index: 1; top: var(--pin-y); left: var(--pin-x); display: grid; width: clamp(2.3rem, 4vw, 3rem); aspect-ratio: 1; place-items: center; padding: 0; transform: translate(-50%, -50%); border: 1px solid #ffffff; border-radius: 50%; background: #f7f5efed; box-shadow: 0 2px 9px #1c2e2433; color: var(--forest, #284f41); cursor: pointer; font: 700 .64rem/1 var(--sans, sans-serif); letter-spacing: .03em; transition: color .25s ease, background .25s ease, border-color .25s ease, box-shadow .25s ease, scale .25s ease; }
+  .export-atlas-pin::before { position: absolute; inset: -5px; border: 1px solid #426d524d; border-radius: 50%; content: ""; opacity: 0; scale: .84; transition: opacity .25s ease, scale .25s ease; }
+  .export-atlas-pin:hover, .export-atlas-pin:focus-visible { z-index: 2; outline: none; scale: 1.09; }
+  .export-atlas-pin:focus-visible { box-shadow: 0 0 0 3px #a96f428c; }
+  .export-atlas-pin.is-active { border-color: #fff; background: var(--forest, #284f41); box-shadow: 0 5px 14px #18392f4a; color: #fff; }
+  .export-atlas-pin.is-active::before { opacity: 1; scale: 1; animation: export-atlas-pulse 2.8s ease-out infinite; }
+  .export-atlas-map-card figcaption { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem .7rem; padding: .8rem .1rem .1rem; color: #68756d; font-size: .7rem; line-height: 1.5; }
+  .export-atlas-legend { width: .58rem; aspect-ratio: 1; border-radius: 50%; background: #426d52; box-shadow: 0 0 0 3px #426d521c; }
+  .export-atlas-caption-note { margin-left: auto; color: #8a8b82; font-size: .65rem; }
+  .export-atlas-panel { display: grid; grid-template-rows: auto 1fr; min-width: 0; padding: clamp(.85rem, 1.6vw, 1.35rem) clamp(.8rem, 1.45vw, 1.2rem); background: #fff; }
+  .export-atlas-selected { padding: .1rem .15rem 1.2rem; }
+  .export-atlas-selected .eyebrow { margin-bottom: .7rem; }
+  .export-atlas-current { display: flex; align-items: center; gap: .7rem; color: #a96f42; font: 700 .66rem/1.4 var(--sans, sans-serif); letter-spacing: .12em; text-transform: uppercase; }
+  .export-atlas-current-rule { width: 1.6rem; height: 1px; background: #cfc8bb; }
+  .export-atlas-current [data-market-region] { color: #78817a; font-size: .62rem; letter-spacing: .09em; }
+  .export-atlas-selected h3 { margin: .5rem 0 .45rem; color: var(--ink, #242722); font: 500 clamp(1.7rem, 2.5vw, 2.5rem)/1.1 var(--serif, Georgia, serif); letter-spacing: -.035em; }
+  .export-atlas-selected > p:last-child { max-width: 34ch; margin: 0; color: #72766f; font-size: .82rem; line-height: 1.65; }
+  .export-atlas-list { display: grid; align-content: end; border-top: 1px solid #e6e3db; }
+  .export-atlas-market { display: grid; grid-template-columns: 2rem minmax(0, 1fr) auto; align-items: center; gap: .65rem; width: 100%; min-height: 3.65rem; padding: .55rem .35rem; border: 0; border-bottom: 1px solid #e6e3db; background: transparent; color: inherit; cursor: pointer; text-align: left; transition: padding .25s ease, background .25s ease; }
+  .export-atlas-market:hover, .export-atlas-market:focus-visible { padding-inline: .7rem; outline: none; background: #f5f3ed; }
+  .export-atlas-market:focus-visible { box-shadow: inset 0 0 0 2px #a96f428c; }
+  .export-atlas-market-number { align-self: start; padding-top: .12rem; color: #a96f42; font: 700 .64rem/1.4 var(--sans, sans-serif); letter-spacing: .06em; }
+  .export-atlas-market-copy { display: grid; gap: .22rem; min-width: 0; }
+  .export-atlas-market-copy strong { overflow: hidden; color: #344a3e; font-size: .82rem; font-weight: 650; line-height: 1.3; text-overflow: ellipsis; }
+  .export-atlas-market-copy > span { color: #888a82; font-size: .65rem; letter-spacing: .06em; }
+  .export-atlas-market-arrow { color: #96968c; font-size: .86rem; transition: color .2s ease, transform .2s ease; }
+  .export-atlas-market.is-active { background: #eff1eb; }
+  .export-atlas-market.is-active .export-atlas-market-copy strong { color: var(--forest, #284f41); }
+  .export-atlas-market.is-active .export-atlas-market-arrow, .export-atlas-market:hover .export-atlas-market-arrow { color: #a96f42; transform: translate(2px, -2px); }
+  @keyframes export-atlas-pulse { 0% { opacity: .72; scale: .86; } 100% { opacity: 0; scale: 1.2; } }
+  @media (max-width: 900px) {
+    .export-atlas { grid-template-columns: minmax(0, 1fr); max-width: 720px; }
+    .export-atlas-panel { grid-template-rows: auto auto; }
+    .export-atlas-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .export-atlas-market:nth-child(odd) { border-right: 1px solid #e6e3db; }
+    .export-atlas-market:last-child { grid-column: 1 / -1; border-right: 0; }
+  }
+  @media (max-width: 520px) {
+    .export-atlas { gap: .7rem; padding: .45rem; }
+    .export-atlas-map-card { padding: .55rem; }
+    .export-atlas-map-topline { font-size: .57rem; }
+    .export-atlas-live { font-size: .58rem; }
+    .export-atlas-pin { width: 2rem; font-size: .57rem; }
+    .export-atlas-pin::before { inset: -4px; }
+    .export-atlas-caption-note { flex-basis: 100%; margin-left: 1.25rem; }
+    .export-atlas-list { grid-template-columns: minmax(0, 1fr); }
+    .export-atlas-market:nth-child(odd) { border-right: 0; }
+    .export-atlas-market:last-child { grid-column: auto; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .export-atlas *, .export-atlas *::before, .export-atlas *::after { transition-duration: .01ms !important; }
+  }
+</style>

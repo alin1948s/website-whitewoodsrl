@@ -1,0 +1,69 @@
+---
+import type { SiteLanguage } from "../lib/db";
+import { categoryPath, translations } from "../lib/language";
+
+interface Props {
+  language: SiteLanguage;
+  alternateHref: string;
+}
+
+const { language, alternateHref } = Astro.props;
+const copy = translations[language];
+const home = `/${language}/`;
+const quoteHref = `/${language}/contact/#quote`;
+const contactHref = `/${language}/contact/`;
+const currentPath = Astro.url.pathname;
+const isCurrent = (href: string) => currentPath === href || (href !== home && currentPath.startsWith(href));
+const logo = language === "ro" ? "/brand/whitewood-logo-ro.svg" : "/brand/whitewood-logo-en.svg";
+const catalogHref = `/${language}/${language === "ro" ? "produse" : "products"}/`;
+const catalogItem = copy.navigation.find((item) => item.href === catalogHref);
+const navigationItems = copy.navigation.filter((item) => item.href !== catalogHref);
+const productLinks = [
+  { slug: "beech" as const, ro: "Fag", en: "Beech" },
+  { slug: "ash" as const, ro: "Frasin", en: "Ash" },
+  { slug: "softwood" as const, ro: "Rășinoase", en: "Softwood" },
+  { slug: "packaging" as const, ro: "Lemn pentru ambalaje", en: "Wood for packaging" },
+].map((product) => ({ href: categoryPath(language, product.slug), label: language === "ro" ? product.ro : product.en }));
+const catalogLabel = catalogItem?.label ?? (language === "ro" ? "Produse" : "Products");
+const allProductsLabel = language === "ro" ? "Toate produsele" : "All products";
+---
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href={home} aria-label={language === "ro" ? "WhiteWOOD — pagina principală" : "WhiteWOOD — home page"} aria-current={currentPath === home ? "page" : undefined}>
+      <img class="brand-logo" src={logo} alt="" width="415" height="114" />
+    </a>
+    <nav class="desktop-nav" aria-label={language === "ro" ? "Navigare principală" : "Main navigation"}>
+      <a href={home} aria-current={currentPath === home ? "page" : undefined}>{copy.home}</a>
+      <details class:list={["nav-dropdown", isCurrent(catalogHref) && "is-current"]}>
+        <summary>{catalogLabel}<span class="nav-chevron" aria-hidden="true"><svg viewBox="0 0 12 12"><path d="m3 4.5 3 3 3-3" /></svg></span></summary>
+        <div class="nav-dropdown-panel">
+          <a class="nav-dropdown-all" href={catalogHref} aria-current={currentPath === catalogHref ? "page" : undefined}>{allProductsLabel}</a>
+          {productLinks.map((product) => <a href={product.href} aria-current={isCurrent(product.href) ? "page" : undefined}>{product.label}</a>)}
+        </div>
+      </details>
+      {navigationItems.map((item) => <a href={item.href} aria-current={isCurrent(item.href) ? "page" : undefined}>{item.label}</a>)}
+      <a href={contactHref} aria-current={isCurrent(contactHref) ? "page" : undefined}>{copy.contact}</a>
+    </nav>
+    <div class="header-actions">
+      <a class="language-link" href={alternateHref} lang={language === "ro" ? "en" : "ro"} aria-label={language === "ro" ? "Switch to English" : "Schimbă în română"}>{language === "ro" ? "EN" : "RO"}</a>
+      <a class="button button--small" href={quoteHref}>{copy.quote}<span aria-hidden="true">↗</span></a>
+      <details class="menu-details">
+        <summary aria-label={language === "ro" ? "Deschide meniul" : "Open menu"}><span class="menu-icon"></span></summary>
+        <nav class="mobile-menu" aria-label={language === "ro" ? "Navigare mobilă" : "Mobile navigation"}>
+          <a href={home} aria-current={currentPath === home ? "page" : undefined}>{copy.home}</a>
+          <details class:list={["nav-dropdown", "mobile-nav-dropdown", isCurrent(catalogHref) && "is-current"]}>
+            <summary>{catalogLabel}<span class="nav-chevron" aria-hidden="true"><svg viewBox="0 0 12 12"><path d="m3 4.5 3 3 3-3" /></svg></span></summary>
+            <div class="nav-dropdown-panel">
+              <a class="nav-dropdown-all" href={catalogHref} aria-current={currentPath === catalogHref ? "page" : undefined}>{allProductsLabel}</a>
+              {productLinks.map((product) => <a href={product.href} aria-current={isCurrent(product.href) ? "page" : undefined}>{product.label}</a>)}
+            </div>
+          </details>
+          {navigationItems.map((item) => <a href={item.href} aria-current={isCurrent(item.href) ? "page" : undefined}>{item.label}</a>)}
+          <a href={contactHref} aria-current={isCurrent(contactHref) ? "page" : undefined}>{copy.contact}</a>
+          <a class="button" href={quoteHref}>{copy.quote}<span aria-hidden="true">↗</span></a>
+        </nav>
+      </details>
+    </div>
+  </div>
+</header>

@@ -1,0 +1,28 @@
+---
+import "../../styles/global.css";
+import { countAdminUsers, getAdminSession } from "../../lib/auth";
+import { getDatabase, getAppMode } from "../../lib/db";
+export const prerender = false;
+const db = getDatabase();
+if (await countAdminUsers(db) > 0) {
+  const session = await getAdminSession(db, Astro.request);
+  return Astro.redirect(session ? "/admin/" : "/admin/login/");
+}
+const local = getAppMode() === "local";
+---
+
+<!doctype html>
+<html lang="ro"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><meta name="robots" content="noindex,nofollow" /><title>Configurare admin | WhiteWOOD</title></head>
+<body class="admin-body">
+  <main class="admin-login">
+    <p class="eyebrow">Prima configurare</p><h1>Creează contul admin</h1>
+    <p class="muted">Această pagină funcționează doar cât timp nu există niciun administrator. Nu există parolă implicită sau înregistrare publică.</p>
+    <div class="draft-notice"><p>{local ? "Tokenul de inițializare este în .dev.vars, creat local și ignorat de Git." : "Folosește tokenul ADMIN_BOOTSTRAP_TOKEN configurat ca secret în Cloudflare."}</p></div>
+    <form method="post" action="/api/admin/setup/">
+      <div class="field"><label for="email">E-mail admin</label><input id="email" name="email" type="email" autocomplete="email" required maxlength="254" /></div>
+      <div class="field"><label for="password">Parolă (minimum 12 caractere)</label><input id="password" name="password" type="password" autocomplete="new-password" required minlength="12" maxlength="200" /></div>
+      <div class="field"><label for="bootstrap_token">Token de inițializare</label><input id="bootstrap_token" name="bootstrap_token" type="password" autocomplete="off" required maxlength="200" /></div>
+      <button class="button" type="submit">Creează contul</button>
+    </form>
+  </main>
+</body></html>

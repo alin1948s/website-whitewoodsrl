@@ -1,0 +1,63 @@
+---
+import type { SiteLanguage } from "../lib/language";
+
+const { language } = Astro.props as { language: SiteLanguage };
+const ro = language === "ro";
+
+const locations = [
+  {
+    id: "office",
+    label: ro ? "Sediu social" : "Head office",
+    city: ro ? "București" : "Bucharest",
+    address: ro
+      ? "Strada Aviator Popișteanu nr. 54A, Biroul 214, Clădirea 2, etajul 2, Sector 1, București, 012244, România"
+      : "54A Aviator Popișteanu Street, Office 214, Building 2, 2nd Floor, District 1, Bucharest 012244, Romania",
+    src: "https://www.google.com/maps/embed?pb=%211m18%211m12%211m3%211d4390.6889833209225%212d26.052728029870387%213d44.47397652675261%212m3%211f0%212f0%213f0%213m2%211i1024%212i768%214f13.1%213m3%211m2%211s0x40b20231a69da2cf%3A0xb0e5b38ccba74d6%212sStrada+Aviator+Popi%C8%99teanu+54A%2C+012244+Bucure%C8%99ti%2C+Romania%215e0%213m2%211sen%212sus%214v1769780081335%215m2%211sen%212sus",
+    href: "https://www.google.com/maps/search/?api=1&query=Strada+Aviator+Popi%C8%99teanu+54A%2C+012244+Bucure%C8%99ti%2C+Romania"
+  },
+  {
+    id: "port",
+    label: ro ? "Depozite și logistică" : "Storage and logistics",
+    city: "Constanța",
+    address: ro
+      ? "Portul Constanța, Poarta 2, Constanța, România"
+      : "Port of Constanța, Gate 2, Constanța, Romania",
+    src: "https://www.google.com/maps/embed?pb=%211m18%211m12%211m3%211d2861.592533392591%212d28.653683648938703%213d44.17425721563229%212m3%211f0%212f0%213f0%213m2%211i1024%212i768%214f13.1%213m3%211m2%211s0x0%3A0x0%212zNDTCsDEwJzI3LjMiTiAyOMKwMzknMTcuOCJF%215e0%213m2%211sen%212sro%214v1467825944068",
+    href: "https://www.google.com/maps/search/?api=1&query=44.1742572%2C28.6536836"
+  }
+];
+
+---
+<section class="contact-maps" id="contact-locations" aria-labelledby="contact-maps-title">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">{ro ? "Locații" : "Locations"}</p>
+      <h2 id="contact-maps-title">{ro ? "WhiteWOOD în București și Constanța." : "WhiteWOOD in Bucharest and Constanța."}</h2>
+    </div>
+    <p class="lede">{ro ? "Ne găsești la sediul social din București și la punctul logistic din Portul Constanța, Poarta 2." : "Visit our registered office in Bucharest or find our logistics location at Gate 2 of the Port of Constanța."}</p>
+  </div>
+  <div class="contact-map-grid">
+    {locations.map((location) => (
+      <article class="contact-map-card">
+        <div class="contact-map-copy">
+          <p class="eyebrow">{location.label}</p>
+          <h3>{location.city}</h3>
+          <address>{location.address}</address>
+        </div>
+        <div class="contact-map-frame">
+          <iframe
+            src={location.src}
+            title={`${location.label} · ${location.city} — Google Maps`}
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            allowfullscreen
+          ></iframe>
+        </div>
+        <a class="contact-map-link" href={location.href} target="_blank" rel="noopener noreferrer">
+          <span>{ro ? "Deschide în Google Maps" : "Open in Google Maps"}</span>
+          <span aria-hidden="true">↗</span>
+        </a>
+      </article>
+    ))}
+  </div>
+</section>

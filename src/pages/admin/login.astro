@@ -1,0 +1,27 @@
+---
+import "../../styles/global.css";
+import { countAdminUsers, getAdminSession } from "../../lib/auth";
+import { getDatabase } from "../../lib/db";
+export const prerender = false;
+const db = getDatabase();
+if (await countAdminUsers(db) === 0) return Astro.redirect("/admin/setup/");
+const session = await getAdminSession(db, Astro.request);
+if (session) return Astro.redirect("/admin/");
+const failed = Astro.url.searchParams.get("error") === "1";
+---
+
+<!doctype html>
+<html lang="ro"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><meta name="robots" content="noindex,nofollow" /><title>Autentificare | WhiteWOOD Admin</title></head>
+<body class="admin-body">
+  <main class="admin-login">
+    <p class="eyebrow">Administrare WhiteWOOD</p><h1>Autentificare</h1>
+    <p class="muted">Intră pentru a gestiona catalogul, paginile și cererile de ofertă.</p>
+    {failed && <p class="admin-flash" data-state="error" role="alert">Autentificarea nu a reușit. Verifică datele de acces sau limita de încercări.</p>}
+    <form method="post" action="/api/admin/login/">
+      <div class="field"><label for="email">E-mail</label><input id="email" name="email" type="email" autocomplete="username" required maxlength="254" /></div>
+      <div class="field"><label for="password">Parolă</label><input id="password" name="password" type="password" autocomplete="current-password" required maxlength="200" /></div>
+      <button class="button" type="submit">Autentifică-te</button>
+    </form>
+    <p class="muted admin-login-note">Nu există înregistrare publică. Primul cont se configurează o singură dată cu tokenul local.</p>
+  </main>
+</body></html>

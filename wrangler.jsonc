@@ -1,0 +1,40 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "whitewoodsrl-site",
+  "main": "@astrojs/cloudflare/entrypoints/server",
+  "compatibility_date": "2026-10-10",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS"
+  },
+  "vars": {
+    "APP_MODE": "local",
+    "SITE_ORIGIN": "http://localhost:4321"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "whitewoodsrl-local",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "env": {
+    "production": {
+      "vars": {
+        "APP_MODE": "production",
+        "SITE_ORIGIN": "https://whitewoodtrading.com",
+        "PRIVACY_NOTICE_APPROVED": "false",
+        "PUBLIC_MEDIA_APPROVED": "false"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "whitewoodsrl-production",
+          "database_id": "00000000-0000-0000-0000-000000000000",
+          "migrations_dir": "migrations"
+        }
+      ]
+    }
+  }
+}

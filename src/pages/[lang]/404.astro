@@ -1,0 +1,21 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import NotFoundPanel from "../../components/NotFoundPanel.astro";
+import { isLanguage, type SiteLanguage } from "../../lib/language";
+export const prerender = false;
+const language: SiteLanguage = isLanguage(Astro.params.lang) ? Astro.params.lang : "ro";
+Astro.response.status = 404;
+const ro = language === "ro";
+---
+
+<SiteLayout language={language} title={ro ? "Pagina nu a fost găsită | WhiteWOOD" : "Page not found | WhiteWOOD"} description={ro ? "Pagina nu este disponibilă." : "This page is not available."} noindex>
+  <NotFoundPanel
+    language={language}
+    title={ro ? "Pagina nu a fost găsită" : "Page not found"}
+    description={ro ? "Pagina solicitată nu este disponibilă. Poți reveni acasă sau poți explora catalogul WhiteWOOD." : "The requested page is not available. Return home or explore the WhiteWOOD catalogue."}
+    primaryHref={ro ? "/ro/" : "/en/"}
+    primaryLabel={ro ? "Înapoi acasă" : "Back home"}
+    secondaryHref={ro ? "/ro/produse/" : "/en/products/"}
+    secondaryLabel={ro ? "Vezi catalogul" : "View catalogue"}
+  />
+</SiteLayout>

@@ -1,0 +1,182 @@
+---
+import type { Product } from "../lib/repositories";
+import type { SiteLanguage } from "../lib/db";
+
+interface Props {
+  language: SiteLanguage;
+  products: Product[];
+  enabled: boolean;
+}
+
+const { language, products, enabled } = Astro.props;
+const ro = language === "ro";
+const catalog = products.map((product) => ({
+  id: product.id,
+  title: product.title,
+  species: product.species,
+  specs: product.specs.map((spec) => ({ key: spec.key, label: spec.label, value: spec.value, unit: spec.unit }))
+}));
+---
+
+{enabled ? (
+  <form class="request-form" id="quote-form" method="post" action="/api/quote/" data-products={JSON.stringify(catalog)} data-language={language}>
+    <input type="hidden" name="return_path" value={`/${language}/contact/`} />
+    <input type="hidden" name="language" value={language} />
+    <input type="hidden" name="specs_json" id="specs-json" value="[]" />
+    <div class="sr-only" aria-hidden="true"><label for="website">{ro ? "Lasă acest câmp gol" : "Leave this field blank"}</label><input id="website" name="website" tabindex="-1" autocomplete="off" /></div>
+
+    <div class="form-section form-section--first">
+      <div class="form-section-head">
+        <span class="form-step-index" aria-hidden="true">01</span>
+        <div>
+          <p class="eyebrow">{ro ? "Cererea ta" : "Your request"}</p>
+          <h3>{ro ? "Detaliile ofertei" : "Quote details"}</h3>
+          <p class="form-section-intro muted">{ro ? "Catalogul te ajută să selectezi sortimentul și dimensiunile dorite; poți adăuga orice detaliu suplimentar mai jos." : "Choose a grade and dimensions from the catalogue, then add any other details below."}</p>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="field field--wide">
+          <label for="product-id">{ro ? "Produs" : "Product"} *</label>
+          <select id="product-id" name="product_id" required>
+            <option value="">{ro ? "Alege produsul" : "Choose a product"}</option>
+            {products.map((product) => <option value={product.id} selected={Astro.url.searchParams.get("product") === product.id}>{product.title}{product.species ? ` · ${product.species}` : ""}</option>)}
+          </select>
+        </div>
+        <div class="field"><label for="estimated-volume">{ro ? "Volum estimativ" : "Estimated volume"}</label><input id="estimated-volume" name="estimated_volume" maxlength="60" /></div>
+        <div class="field"><label for="destination">{ro ? "Destinație" : "Destination"}</label><input id="destination" name="destination" maxlength="120" autocomplete="country-name" /></div>
+      </div>
+      <div id="confirmed-spec-choices" class="spec-choice-list" aria-live="polite"></div>
+        <p class="field"><label for="summary">{ro ? "Detaliile selectate" : "Selected details"} *</label><textarea id="summary" name="summary" class="summary-box" readonly required aria-describedby="summary-help"></textarea><small id="summary-help">{ro ? "Sortimentul și dimensiunile alese apar aici." : "Your selected grade and dimensions appear here."}</small></p>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-head">
+        <span class="form-step-index" aria-hidden="true">02</span>
+        <div>
+          <p class="eyebrow">{ro ? "Date de contact" : "Contact details"}</p>
+          <h3>{ro ? "Unde te putem contacta?" : "How can we reach you?"}</h3>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label for="name">{ro ? "Nume" : "Name"} *</label><input id="name" name="name" maxlength="120" autocomplete="name" required /></div>
+        <div class="field"><label for="company">{ro ? "Companie" : "Company"} *</label><input id="company" name="company" maxlength="160" autocomplete="organization" required /></div>
+        <div class="field"><label for="email">E-mail *</label><input id="email" name="email" type="email" maxlength="254" autocomplete="email" required /></div>
+        <div class="field"><label for="phone">{ro ? "Telefon" : "Phone"}</label><input id="phone" name="phone" maxlength="50" type="tel" autocomplete="tel" /></div>
+        <div class="field field--wide"><label for="country">{ro ? "Țara companiei" : "Company country"}</label><input id="country" name="country" maxlength="100" autocomplete="country-name" /></div>
+        <div class="field field--wide"><label for="notes">{ro ? "Alte detalii despre proiect" : "Other project details"}</label><textarea id="notes" name="notes" maxlength="2000"></textarea></div>
+      </div>
+      <label class="checkbox-row"><input type="checkbox" name="data_ack" value="yes" required /><span>{ro ? "Confirm că am citit " : "I have read the "}<a href={ro ? "/ro/confidentialitate/" : "/en/privacy/"}>{ro ? "informarea privind protecția datelor" : "personal data notice"}</a>.</span></label>
+      <div class="form-actions">
+        <button class="button" type="submit">{ro ? "Trimite solicitarea" : "Send request"}<span aria-hidden="true">↗</span></button>
+        <span class="form-confirmation muted">{ro ? "Datele de contact sunt folosite pentru a răspunde solicitării." : "Your contact details are used to respond to your enquiry."}</span>
+      </div>
+      <p class="form-result" id="form-result" role="status" aria-live="polite"></p>
+    </div>
+  </form>
+) : null}
+
+<script>
+  const form = document.querySelector<HTMLFormElement>("#quote-form");
+  if (form) {
+    type Spec = { key: string; label: string; value: string; unit: string | null };
+    type ProductChoice = { id: string; title: string; species: string | null; specs: Spec[] };
+    const catalog = JSON.parse(form.dataset.products || "[]") as ProductChoice[];
+    const product = form.querySelector<HTMLSelectElement>("#product-id");
+    const specChoices = form.querySelector<HTMLDivElement>("#confirmed-spec-choices");
+    const specsJson = form.querySelector<HTMLInputElement>("#specs-json");
+    const summary = form.querySelector<HTMLTextAreaElement>("#summary");
+    const result = form.querySelector<HTMLParagraphElement>("#form-result");
+    const ro = form.dataset.language === "ro";
+
+    const selectedSpecs = (): { key: string; value: string }[] => {
+      if (!specChoices) return [];
+      return [...specChoices.querySelectorAll<HTMLSelectElement>("select[data-spec-key]")]
+        .filter((select) => select.value)
+        .map((select) => ({ key: select.dataset.specKey || "", value: select.value }));
+    };
+
+    const renderSpecs = () => {
+      if (!product || !specChoices) return;
+      const selected = catalog.find((item) => item.id === product.value);
+      specChoices.replaceChildren();
+      if (!selected?.specs.length) return;
+      const groups = new Map<string, Spec[]>();
+      for (const spec of selected.specs) groups.set(spec.key, [...(groups.get(spec.key) || []), spec]);
+      for (const [key, options] of groups) {
+        const firstOption = options[0];
+        if (!firstOption) continue;
+        const wrapper = document.createElement("div");
+        wrapper.className = "field";
+        const label = document.createElement("label");
+        const select = document.createElement("select");
+        const id = `spec-${key.replace(/[^a-z0-9_-]/gi, "-")}`;
+        label.htmlFor = id;
+        label.textContent = firstOption.label;
+        select.id = id;
+        select.dataset.specKey = key;
+        const empty = document.createElement("option");
+        empty.value = "";
+        empty.textContent = ro ? "Nu preciza" : "No preference";
+        select.append(empty);
+        for (const option of options) {
+          const item = document.createElement("option");
+          item.value = option.value;
+          item.textContent = option.unit ? `${option.value} ${option.unit}` : option.value;
+          select.append(item);
+        }
+        wrapper.append(label, select);
+        specChoices.append(wrapper);
+      }
+    };
+
+    const buildSummary = () => {
+      if (!product || !specsJson || !summary) return;
+      const choice = catalog.find((item) => item.id === product.value);
+      const chosen = selectedSpecs();
+      specsJson.value = JSON.stringify(chosen);
+      const volume = form.querySelector<HTMLInputElement>("#estimated-volume")?.value.trim();
+      const destination = form.querySelector<HTMLInputElement>("#destination")?.value.trim();
+      const notes = form.querySelector<HTMLTextAreaElement>("#notes")?.value.trim();
+      const lines = [choice ? `${choice.title}${choice.species ? ` — ${choice.species}` : ""}` : ""];
+      for (const item of chosen) {
+        const spec = choice?.specs.find((entry) => entry.key === item.key && entry.value === item.value);
+        if (spec) lines.push(`${spec.label}: ${spec.value}${spec.unit ? ` ${spec.unit}` : ""}`);
+      }
+      if (volume) lines.push(`${ro ? "Volum estimativ" : "Estimated volume"}: ${volume}`);
+      if (destination) lines.push(`${ro ? "Destinație" : "Destination"}: ${destination}`);
+      if (notes) lines.push(`${ro ? "Observații" : "Notes"}: ${notes}`);
+      summary.value = lines.filter(Boolean).join("\n");
+    };
+
+    product?.addEventListener("change", () => { renderSpecs(); buildSummary(); });
+    form.addEventListener("input", buildSummary);
+    form.addEventListener("change", buildSummary);
+    renderSpecs();
+    buildSummary();
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      buildSummary();
+      if (!form.reportValidity() || !result) return;
+      result.textContent = ro ? "Se trimite solicitarea…" : "Sending your request…";
+      result.dataset.state = "pending";
+      const submitButton = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+      if (submitButton) submitButton.disabled = true;
+      try {
+        const response = await fetch(form.action, { method: "POST", body: new FormData(form), headers: { Accept: "application/json" } });
+        const payload = await response.json() as { ok?: boolean; message?: string };
+        if (!response.ok || !payload.ok) throw new Error(payload.message || (ro ? "Cererea nu a fost salvată." : "The request was not saved."));
+        result.textContent = payload.message || (ro ? "Solicitarea a fost salvată." : "Your request was saved.");
+        result.dataset.state = "success";
+        form.reset();
+        renderSpecs();
+        buildSummary();
+      } catch (error) {
+        result.textContent = error instanceof Error ? error.message : (ro ? "Nu am putut salva cererea." : "We could not save the request.");
+        result.dataset.state = "error";
+      } finally {
+        if (submitButton) submitButton.disabled = false;
+      }
+    });
+  }
+</script>

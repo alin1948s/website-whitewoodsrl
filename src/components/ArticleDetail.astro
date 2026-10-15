@@ -1,0 +1,49 @@
+---
+import type { Article } from "../lib/repositories";
+import type { SiteLanguage } from "../lib/language";
+import NotFoundPanel from "./NotFoundPanel.astro";
+import SiteLayout from "../layouts/SiteLayout.astro";
+
+interface Props {
+  language: SiteLanguage;
+  article: Article | null;
+  alternateSlug: string | undefined;
+}
+
+const { language, article, alternateSlug } = Astro.props;
+const ro = language === "ro";
+if (!article) Astro.response.status = 404;
+const date = article?.date || "";
+const dateLabel = date ? new Date(date + "T12:00:00Z").toLocaleDateString(ro ? "ro-RO" : "en-GB", { day: "numeric", month: "long", year: "numeric" }) : "";
+const wordCount = article?.body.trim().split(/\s+/).filter(Boolean).length ?? 0;
+const readingMinutes = Math.max(1, Math.ceil(wordCount / 200));
+const paragraphs = article?.body.split(/\r?\n\s*\r?\n/).map((paragraph) => paragraph.trim()).filter(Boolean) ?? [];
+const alternateHref = alternateSlug
+  ? `/${ro ? "en/articles" : "ro/articole"}/${alternateSlug}/`
+  : (ro ? "/en/articles/" : "/ro/articole/");
+---
+
+<SiteLayout language={language} title={article?.seoTitle || (article ? `${article.title} | WhiteWOOD` : (ro ? "Articol indisponibil | WhiteWOOD" : "Article unavailable | WhiteWOOD"))} description={article?.seoDescription || article?.excerpt || (ro ? "Articol WhiteWOOD." : "WhiteWOOD article.")} alternateHref={alternateHref} noindex={!article}>
+  {article ? <article class="wrap article-detail">
+    <p class="eyebrow"><a href={ro ? "/ro/articole/" : "/en/articles/"}>{ro ? "Arhiva de articole" : "Article archive"}</a> / WhiteWOOD</p>
+    <header class="article-detail-head">
+      <div class="article-detail-meta">
+        {date && <time class="article-date" datetime={date}>{ro ? "Publicat la " : "Published "}{dateLabel}</time>}
+        <span class="article-reading-time">{ro ? `${readingMinutes} min de lectură` : `${readingMinutes} min read`}</span>
+      </div>
+      <h1>{article.title}</h1>
+      {article.excerpt && <p class="lede">{article.excerpt}</p>}
+    </header>
+    {paragraphs.length > 0 && <div class="article-body">{paragraphs.map((paragraph) => <p>{paragraph}</p>)}</div>}
+    <a class="text-link" href={ro ? "/ro/articole/" : "/en/articles/"}>{ro ? "← Înapoi la articole" : "← Back to journal"}</a>
+  </article> : <NotFoundPanel
+    language={language}
+    eyebrow={ro ? "Articol / Arhivă" : "Article / Journal"}
+    title={ro ? "Articol indisponibil" : "Article unavailable"}
+    description={ro ? "Nu am găsit acest articol. Explorează celelalte materiale WhiteWOOD sau revino la pagina principală." : "We couldn’t find this article. Explore other WhiteWOOD stories or return to the homepage."}
+    primaryHref={ro ? "/ro/articole/" : "/en/articles/"}
+    primaryLabel={ro ? "Vezi articolele" : "View journal"}
+    secondaryHref={ro ? "/ro/" : "/en/"}
+    secondaryLabel={ro ? "Acasă" : "Home"}
+  />}
+</SiteLayout>

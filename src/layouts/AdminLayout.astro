@@ -1,0 +1,45 @@
+---
+import "../styles/global.css";
+import type { AppMode } from "../lib/db";
+import type { AdminSession } from "../lib/auth";
+import WoodMark from "../components/WoodMark.astro";
+
+interface Props {
+  title: string;
+  session: AdminSession;
+  mode: AppMode;
+}
+
+const { title, session, mode } = Astro.props;
+const local = mode === "local";
+const currentPath = Astro.url.pathname;
+---
+
+<!doctype html>
+<html lang="ro">
+  <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><meta name="robots" content="noindex,nofollow" /><title>{title} | WhiteWOOD Admin</title></head>
+  <body class="admin-body">
+    <div class="admin-shell">
+      <aside class="admin-sidebar">
+        <h1 class="admin-brand"><WoodMark /><span>WhiteWOOD<br />Admin</span></h1>
+        <nav class="admin-nav" aria-label="Administrare">
+          <a href="/admin/" aria-current={currentPath === "/admin/" ? "page" : undefined}>Panou</a>
+          <a href="/admin/products/" aria-current={currentPath === "/admin/products/" ? "page" : undefined}>Produse</a>
+          <a href="/admin/content/" aria-current={currentPath === "/admin/content/" ? "page" : undefined}>Conținut și asset-uri</a>
+          <a href="/admin/requests/" aria-current={currentPath === "/admin/requests/" ? "page" : undefined}>Cereri ofertă</a>
+        </nav>
+        <form class="admin-sidebar-logout" method="post" action="/api/admin/logout/">
+          <input type="hidden" name="csrf" value={session.csrf} />
+          <button class="button button--small" type="submit">Ieșire</button>
+        </form>
+      </aside>
+      <main class="admin-main">
+        <div class="admin-topline">
+          <div><p class="eyebrow">{session.email}</p><h2>{title}</h2></div>
+          <span class="admin-status">{local ? "D1 local · date demonstrative" : "D1 Cloudflare"}</span>
+        </div>
+        <slot />
+      </main>
+    </div>
+  </body>
+</html>

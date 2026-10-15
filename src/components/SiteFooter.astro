@@ -1,0 +1,56 @@
+---
+import type { SiteLanguage } from "../lib/db";
+import WoodMark from "./WoodMark.astro";
+
+const { language } = Astro.props as { language: SiteLanguage };
+const ro = language === "ro";
+---
+
+<footer class="site-footer">
+  <div class="wrap footer-main">
+    <div>
+      <div class="footer-brand"><WoodMark /> <span>WhiteWOOD</span></div>
+      <p class="footer-note">{ro ? "Cherestea și grinzi din fag, frasin și rășinoase, pregătite pentru construcții, mobilier și expediere." : "Beech, ash and softwood timber and beams, prepared for construction, furniture and shipment."}</p>
+    </div>
+    <div class="footer-links" aria-label={ro ? "Produse" : "Products"}>
+      <span class="eyebrow">{ro ? "Catalog" : "Catalogue"}</span>
+      <a href={ro ? "/ro/produse/fag/" : "/en/products/beech/"}>{ro ? "Fag" : "Beech"}</a>
+      <a href={ro ? "/ro/produse/frasin/" : "/en/products/ash/"}>{ro ? "Frasin" : "Ash"}</a>
+      <a href={ro ? "/ro/produse/rasinoase/" : "/en/products/softwood/"}>{ro ? "Rășinoase" : "Softwood"}</a>
+      <a href={ro ? "/ro/produse/ambalaje/" : "/en/products/packaging/"}>{ro ? "Lemn pentru ambalaje" : "Wood for packaging"}</a>
+    </div>
+    <div class="footer-links">
+      <span class="eyebrow">{ro ? "Informații" : "Information"}</span>
+      <a href={ro ? "/ro/despre/" : "/en/about/"}>{ro ? "Despre WhiteWOOD" : "About WhiteWOOD"}</a>
+      <a href={ro ? "/ro/proces/" : "/en/process/"}>{ro ? "Proces și logistică" : "Processing and logistics"}</a>
+      <a href={ro ? "/ro/articole/" : "/en/articles/"}>{ro ? "Articole" : "Articles"}</a>
+      <a href={ro ? "/ro/contact/" : "/en/contact/"}>{ro ? "Contact și ofertă" : "Contact and quote"}</a>
+      <a href={ro ? "/ro/confidentialitate/" : "/en/privacy/"}>{ro ? "Confidențialitate" : "Privacy"}</a>
+      <a href={ro ? "/ro/cookies/" : "/en/cookies/"}>{ro ? "Cookie-uri" : "Cookies"}</a>
+    </div>
+    <div class="footer-contact" aria-label={ro ? "Date de contact și identificare" : "Contact and company details"}>
+      <div class="footer-contact-block">
+        <span class="eyebrow">{ro ? "Contact" : "Get in touch"}</span>
+        <a href="tel:+40722279481">(+4) 0722.279.481</a>
+        <a href="mailto:office@whitewoodtrading.com">office@whitewoodtrading.com</a>
+        <a href="mailto:office.whitewood@gmail.com">office.whitewood@gmail.com</a>
+      </div>
+      <div class="footer-contact-block">
+        <span class="eyebrow">{ro ? "Sediu social" : "Registered office"}</span>
+        <address>{ro
+          ? "Strada Aviator Popișteanu nr. 54A, Biroul 214 (ResCo-work08), Clădirea 2, etajul 2, Sectorul 1, București 012244, România"
+          : "54A Aviator Popișteanu Street, Office 214 (ResCo-work08), Building 2, 2nd Floor, District 1, Bucharest 012244, Romania"}</address>
+      </div>
+      <div class="footer-contact-block footer-company-details">
+        <span class="eyebrow">{ro ? "Date companie" : "Company details"}</span>
+        <strong>WhiteWOOD SRL</strong>
+        <span>{ro ? "CUI: RO23420569" : "VAT no.: RO23420569"}</span>
+        <span>{ro ? "Nr. Reg. Comerțului: J2008003919400" : "Trade Register: J2008003919400"}</span>
+      </div>
+    </div>
+  </div>
+  <div class="wrap footer-bottom">
+    <span>© {new Date().getFullYear()} WhiteWOOD SRL</span>
+    <span>{ro ? "Depozite și logistică: Portul Constanța, Poarta 2 · România" : "Storage and logistics: Port of Constanța, Gate 2 · Romania"}</span>
+  </div>
+</footer>

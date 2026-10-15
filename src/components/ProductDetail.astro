@@ -1,0 +1,67 @@
+---
+import { getAppMode, getDatabase, mediaIsAllowed } from "../lib/db";
+import type { SiteLanguage } from "../lib/language";
+import { getPublishedProducts } from "../lib/repositories";
+import Photo from "./Photo.astro";
+import NotFoundPanel from "./NotFoundPanel.astro";
+import SiteLayout from "../layouts/SiteLayout.astro";
+import WoodMotif from "./WoodMotif.astro";
+
+const { language, slug } = Astro.props as { language: SiteLanguage; slug: string };
+const mode = getAppMode();
+const db = getDatabase();
+const products = await getPublishedProducts(db, language, mode);
+const product = products.find((item) => item.slug === slug);
+const ro = language === "ro";
+const mediaEnabled = mediaIsAllowed();
+const photoByCategory: Record<string, string> = { beech: "product-beech", ash: "product-ash", softwood: "product-softwood", packaging: "product-packaging" };
+const photoName = product ? photoByCategory[product.categorySlug] : undefined;
+const alternateLanguage: SiteLanguage = ro ? "en" : "ro";
+const alternateProduct = product ? (await getPublishedProducts(db, alternateLanguage, mode)).find((item) => item.id === product.id) : null;
+const alternateHref = alternateProduct
+  ? "/" + alternateLanguage + "/" + (ro ? "products" : "produse") + "/" + alternateProduct.slug + "/"
+  : (ro ? "/en/products/" : "/ro/produse/");
+if (!product) Astro.response.status = 404;
+const description = product?.intro || "";
+---
+
+<SiteLayout language={language} title={product ? product.title + " | WhiteWOOD" : (ro ? "Produs indisponibil | WhiteWOOD" : "Product unavailable | WhiteWOOD")} description={description} alternateHref={alternateHref} noindex={!product}>
+  {product ? (
+    <>
+      <section class:list={["wrap", "product-hero", (!mediaEnabled || !photoName) && "product-hero--text"]}>
+        <div>
+          <p class="eyebrow">{ro ? "Produs / " : "Product / "}{product.species || (ro ? "Lemn pentru ambalaje" : "Wood for packaging")}</p>
+          <h1>{product.title}</h1>
+          <p class="hero-lede">{product.intro}</p>
+          <a class="button" href={"/" + language + "/contact/?product=" + product.id + "#quote"}>{ro ? "Solicită o ofertă" : "Request a quote"}<span aria-hidden="true">↗</span></a>
+        </div>
+        {mediaEnabled && photoName && <figure>
+          <Photo name={photoName} alt={product.categorySlug === "beech" ? (ro ? "Cherestea de fag stivuită" : "Stacks of beech sawn timber") : product.categorySlug === "ash" ? (ro ? "Cherestea de frasin stivuită" : "Stacks of ash timber") : product.categorySlug === "softwood" ? (ro ? "Cherestea de molid rindeluită" : "Planed spruce timber") : (ro ? "Ambalaje realizate din lemn" : "Wooden packaging") } sizes="(max-width: 760px) 100vw, 58vw" loading="eager" fetchpriority="high" />
+        </figure>}
+      </section>
+      {product.specs.length > 0 && <section class="wrap section--tight">
+        <div class="section-heading section-heading--single"><div><h2>{ro ? "Sortimente și dimensiuni" : "Grades and dimensions"}</h2><div class="accent-rule" aria-hidden="true"></div></div></div>
+        <dl class="spec-list">{product.specs.map((spec) => <div><dt>{spec.label}</dt><dd>{spec.value}{spec.unit ? " " + spec.unit : ""}</dd></div>)}</dl>
+      </section>}
+      {product.useText && <section class="wrap section--tight product-use-section">
+        <div class="section-heading section-heading--single"><div><h2>{ro ? "Utilizări și norme de calitate" : "Uses and grading"}</h2><div class="accent-rule" aria-hidden="true"></div></div></div>
+        <div class="product-use-text">{product.useText}</div>
+      </section>}
+      <section class="wrap section--tight product-request-panel">
+        <div><p class="eyebrow">{ro ? "Pentru proiectul tău" : "For your project"}</p><h2>{ro ? "O ofertă pentru sortimentul ales." : "A quote for your selected grade."}</h2><p class="muted">{ro ? "Trimite-ne volumul și destinația livrării. Vom analiza cererea împreună cu specificațiile selectate." : "Share your volume and delivery destination. We’ll review your request alongside the selected specifications."}</p><a class="button button--light" href={"/" + language + "/contact/?product=" + product.id + "#quote"}>{ro ? "Solicită o ofertă" : "Request a quote"}<span aria-hidden="true">↗</span></a></div>
+        <WoodMotif />
+      </section>
+    </>
+  ) : (
+    <NotFoundPanel
+      language={language}
+      eyebrow={ro ? "Produs / Catalog" : "Product / Catalogue"}
+      title={ro ? "Produs indisponibil" : "Product unavailable"}
+      description={ro ? "Nu am găsit acest produs în catalog. Explorează celelalte sortimente sau contactează echipa WhiteWOOD." : "We couldn’t find this product in the catalogue. Explore the other grades or contact the WhiteWOOD team."}
+      primaryHref={ro ? "/ro/produse/" : "/en/products/"}
+      primaryLabel={ro ? "Vezi catalogul" : "View catalogue"}
+      secondaryHref={ro ? "/ro/contact/" : "/en/contact/"}
+      secondaryLabel={ro ? "Contact" : "Contact"}
+    />
+  )}
+</SiteLayout>

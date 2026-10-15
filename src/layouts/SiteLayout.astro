@@ -1,0 +1,47 @@
+---
+import "../styles/global.css";
+import SiteHeader from "../components/SiteHeader.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import type { SiteLanguage } from "../lib/db";
+import { mediaIsAllowed } from "../lib/db";
+
+interface Props {
+  language: SiteLanguage;
+  title: string;
+  description: string;
+  alternateHref?: string;
+  canonical?: string;
+  noindex?: boolean;
+}
+
+const { language, title, description, alternateHref = `/${language === "ro" ? "en" : "ro"}/`, canonical, noindex = false } = Astro.props;
+const mediaEnabled = mediaIsAllowed();
+const canonicalUrl = canonical ? new URL(canonical, Astro.site).href : new URL(Astro.url.pathname, Astro.site).href;
+const socialImage = mediaEnabled ? new URL("/images/hero-yard-960.avif", Astro.site).href : undefined;
+---
+
+<!doctype html>
+<html lang={language}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f3f0e8" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalUrl} />
+    <link rel="alternate" hreflang="ro" href={new URL(language === "ro" ? Astro.url.pathname : alternateHref, Astro.site).href} />
+    <link rel="alternate" hreflang="en" href={new URL(language === "en" ? Astro.url.pathname : alternateHref, Astro.site).href} />
+    <link rel="alternate" hreflang="x-default" href={new URL("/en/", Astro.site).href} />
+    <link rel="icon" href="/favicon.svg" />
+    {socialImage && <meta property="og:image" content={socialImage} />}
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+  </head>
+  <body>
+    <SiteHeader language={language} alternateHref={alternateHref} />
+    <main id="main-content"><slot /></main>
+    <SiteFooter language={language} />
+  </body>
+</html>

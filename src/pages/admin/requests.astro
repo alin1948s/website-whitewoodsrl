@@ -1,0 +1,265 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { countAdminUsers, getAdminSession } from "../../lib/auth";
+import { getAppMode, getDatabase } from "../../lib/db";
+
+export const prerender = false;
+
+const db = getDatabase();
+if (await countAdminUsers(db) === 0) return Astro.redirect("/admin/setup/");
+const session = await getAdminSession(db, Astro.request);
+if (!session) return Astro.redirect("/admin/login/");
+
+const mode = getAppMode();
+const requests = await db.prepare("SELECT * FROM quote_requests ORDER BY created_at DESC LIMIT 200").all<{
+  id: string;
+  name: string;
+  company: string;
+  email: string;
+  phone: string | null;
+  country: string | null;
+  destination: string | null;
+  summary: string;
+  status: string;
+  source: string;
+  is_demo: number;
+  created_at: string;
+  updated_at: string;
+}>();
+
+const statuses = [
+  { value: "new", label: "Nouă" },
+  { value: "in_progress", label: "În lucru" },
+  { value: "answered", label: "Răspunsă" },
+  { value: "archived", label: "Arhivată" }
+] as const;
+const statusLabels: Record<string, string> = Object.fromEntries(statuses.map((status) => [status.value, status.label]));
+const requestRows = await Promise.all((requests.results ?? []).map(async (request) => {
+  const items = await db.prepare(`
+    SELECT i.category, i.species, i.finish, i.drying, i.dimensions,
+           i.estimated_volume, i.destination, i.notes, p.title_ro AS product_title
+      FROM quote_request_items i
+      LEFT JOIN products p ON p.id = i.product_id
+     WHERE i.request_id = ?
+     ORDER BY i.rowid
+  `).bind(request.id).all<{
+    category: string | null;
+    species: string | null;
+    finish: string | null;
+    drying: string | null;
+    dimensions: string | null;
+    estimated_volume: string | null;
+    destination: string | null;
+    notes: string | null;
+    product_title: string | null;
+  }>();
+  const notes = await db.prepare(`
+    SELECT n.note, n.created_at, u.email
+      FROM quote_request_notes n
+      LEFT JOIN admin_users u ON u.id = n.admin_id
+     WHERE n.request_id = ?
+     ORDER BY n.created_at DESC
+  `).bind(request.id).all<{ note: string; created_at: string; email: string | null }>();
+  const itemRows = items.results ?? [];
+  const searchable = [
+    request.name,
+    request.company,
+    request.email,
+    request.phone,
+    request.country,
+    request.destination,
+    request.summary,
+    ...itemRows.flatMap((item) => [item.product_title, item.category, item.species, item.estimated_volume, item.dimensions])
+  ].filter(Boolean).join(" ").toLocaleLowerCase("ro");
+  return { request, items: itemRows, notes: notes.results ?? [], searchable };
+}));
+const statusCounts = Object.fromEntries(statuses.map(({ value }) => [
+  value,
+  requestRows.filter(({ request }) => request.status === value).length
+])) as Record<(typeof statuses)[number]["value"], number>;
+const saved = Astro.url.searchParams.get("saved") === "1";
+---
+
+<AdminLayout title="Cereri de ofertă" session={session} mode={mode}>
+  <div class="requests-page">
+    {saved && <p class="admin-flash" role="status">Modificările au fost salvate.</p>}
+    <p class="requests-intro muted">
+      {mode === "local"
+        ? "Cereri demonstrative, păstrate doar în baza locală. Nu se trimit e-mailuri și nu se contactează clienții."
+        : "Cereri trimise prin formularul de ofertă și salvate în baza de producție."}
+    </p>
+
+    <section class="request-toolbar" aria-label="Caută și filtrează cererile">
+      <label class="request-search" for="request-search">
+        <span>Caută după client, companie sau produs</span>
+        <input id="request-search" type="search" autocomplete="off" placeholder="Ex.: nume, e-mail, fag…" />
+      </label>
+      <div class="request-filters" aria-label="Filtrează după stare">
+        <button type="button" class="request-filter is-active" data-status-filter="all" aria-pressed="true">Toate <span>{requestRows.length}</span></button>
+        {statuses.map(({ value, label }) => (
+          <button type="button" class="request-filter" data-status-filter={value} aria-pressed="false">
+            {label} <span>{statusCounts[value] ?? 0}</span>
+          </button>
+        ))}
+      </div>
+      <p id="request-results-count" class="request-results-count" role="status" aria-live="polite">
+        {requestRows.length} {requestRows.length === 1 ? "cerere" : "cereri"}
+      </p>
+    </section>
+
+    <div class="request-list" id="request-list">
+      {requestRows.map(({ request, items, notes, searchable }) => (
+        <article
+          class="request-card"
+          data-request-card
+          data-status={request.status}
+          data-search={searchable}
+        >
+          <header class="request-card-header">
+            <div class="request-card-identity">
+              <div class="request-card-meta">
+                <span class={`request-status-pill request-status-pill--${request.status}`}>
+                  {statusLabels[request.status] || "Nouă"}
+                </span>
+                {request.is_demo === 1 && <span class="request-demo-pill">Test local</span>}
+                <time>{request.created_at}</time>
+              </div>
+              <h3>{request.company}</h3>
+              <p>{request.name}</p>
+            </div>
+
+            <form class="request-status-form" method="post" action="/api/admin/requests/">
+              <input type="hidden" name="csrf" value={session.csrf} />
+              <input type="hidden" name="action" value="status" />
+              <input type="hidden" name="id" value={request.id} />
+              <label for={`status-${request.id}`}>Stare</label>
+              <select id={`status-${request.id}`} name="status">
+                {statuses.map(({ value, label }) => <option value={value} selected={request.status === value}>{label}</option>)}
+              </select>
+              <button class="button button--small" type="submit">Salvează</button>
+            </form>
+          </header>
+
+          <div class="request-products" aria-label="Produse solicitate">
+            {items.length ? items.map((item) => (
+              <div class="request-product-row">
+                <div class="request-product-name">
+                  <span>Produs</span>
+                  <strong>{item.product_title || item.category || "Produs nespecificat"}</strong>
+                  {item.species && <small>{item.species}</small>}
+                </div>
+                <div>
+                  <span>Volum estimativ</span>
+                  <strong>{item.estimated_volume || "Nespecificat"}</strong>
+                </div>
+                <div>
+                  <span>Destinație</span>
+                  <strong>{item.destination || request.destination || "Nespecificată"}</strong>
+                </div>
+              </div>
+            )) : <p class="muted">Nu sunt atașate produse acestei cereri.</p>}
+          </div>
+
+          <div class="request-contact-line">
+            <a href={`mailto:${request.email}`}>{request.email}</a>
+            {request.phone && <a href={`tel:${request.phone}`}>{request.phone}</a>}
+          </div>
+
+          <details class="request-more">
+            <summary>Detalii complete și note interne</summary>
+            <div class="request-detail-grid">
+              <section class="request-detail-block">
+                <h4>Date de contact</h4>
+                <p><strong>{request.name}</strong><br />{request.company}</p>
+                <p><a href={`mailto:${request.email}`}>{request.email}</a><br />{request.phone || "Telefon nespecificat"}</p>
+                <p>{request.country || "Țară nespecificată"} · {request.destination || "Destinație nespecificată"}</p>
+              </section>
+              <section class="request-detail-block">
+                <h4>Rezumatul solicitării</h4>
+                <pre class="admin-preserve">{request.summary}</pre>
+              </section>
+              <section class="request-detail-block">
+                <h4>Specificații</h4>
+                {items.length ? items.map((item) => (
+                  <div class="request-spec-item">
+                    <strong>{item.product_title || item.category || "Produs"}</strong>
+                    {item.finish && <span>Finisaj: {item.finish}</span>}
+                    {item.drying && <span>Uscare: {item.drying}</span>}
+                    {item.dimensions && <span>Dimensiuni: {item.dimensions}</span>}
+                    {item.notes && <span>Observații: {item.notes}</span>}
+                  </div>
+                )) : <p class="muted">Fără specificații suplimentare.</p>}
+              </section>
+            </div>
+
+            <div class="request-notes-area">
+              <form class="request-note-form" method="post" action="/api/admin/requests/">
+                <input type="hidden" name="csrf" value={session.csrf} />
+                <input type="hidden" name="action" value="note" />
+                <input type="hidden" name="id" value={request.id} />
+                <label for={`note-${request.id}`}>Adaugă o notă internă</label>
+                <textarea id={`note-${request.id}`} name="note" required maxlength="3000" placeholder="Notă vizibilă doar în administrare"></textarea>
+                <button class="button button--small" type="submit">Adaugă nota</button>
+              </form>
+              <section class="request-note-history">
+                <h4>Note anterioare</h4>
+                {notes.length ? notes.map((note) => (
+                  <p><span>{note.created_at} · {note.email || "admin"}</span><br />{note.note}</p>
+                )) : <p class="muted">Nu există note interne.</p>}
+              </section>
+            </div>
+          </details>
+        </article>
+      ))}
+
+      {!requestRows.length && (
+        <div class="request-empty">
+          <span aria-hidden="true">—</span>
+          <h3>Nu există cereri încă</h3>
+          <p>Solicitările trimise prin formular vor apărea aici.</p>
+        </div>
+      )}
+      <p id="request-filter-empty" class="request-empty request-empty--filtered" hidden>
+        Nu există cereri care să corespundă filtrelor selectate.
+      </p>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  const page = document.querySelector<HTMLElement>(".requests-page");
+  if (page) {
+    const search = page.querySelector<HTMLInputElement>("#request-search");
+    const cards = [...page.querySelectorAll<HTMLElement>("[data-request-card]")];
+    const filters = [...page.querySelectorAll<HTMLButtonElement>("[data-status-filter]")];
+    const count = page.querySelector<HTMLElement>("#request-results-count");
+    const empty = page.querySelector<HTMLElement>("#request-filter-empty");
+
+    const updateResults = () => {
+      const activeFilter = filters.find((button) => button.getAttribute("aria-pressed") === "true")?.dataset.statusFilter || "all";
+      const query = search?.value.trim().toLocaleLowerCase("ro") || "";
+      let visible = 0;
+      for (const card of cards) {
+        const matchesStatus = activeFilter === "all" || card.dataset.status === activeFilter;
+        const matchesSearch = !query || card.dataset.search?.includes(query);
+        card.hidden = !(matchesStatus && matchesSearch);
+        if (!card.hidden) visible += 1;
+      }
+      if (count) count.textContent = `Afișate ${visible} din ${cards.length} cereri`;
+      if (empty) empty.hidden = visible > 0 || cards.length === 0;
+    };
+
+    search?.addEventListener("input", updateResults);
+    for (const filter of filters) {
+      filter.addEventListener("click", () => {
+        for (const item of filters) {
+          const selected = item === filter;
+          item.setAttribute("aria-pressed", selected ? "true" : "false");
+          item.classList.toggle("is-active", selected);
+        }
+        updateResults();
+      });
+    }
+    updateResults();
+  }
+</script>

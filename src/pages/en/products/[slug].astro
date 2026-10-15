@@ -1,0 +1,7 @@
+---
+import ProductDetail from "../../../components/ProductDetail.astro";
+export const prerender = false;
+const slug = Astro.params.slug || "";
+---
+
+<ProductDetail language="en" slug={slug} />

@@ -1,0 +1,37 @@
+{
+  "name": "whitewoodsrl",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "predev": "node scripts/stage-media.mjs local",
+    "dev": "astro dev",
+    "prebuild": "node scripts/stage-media.mjs production",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "db:migrate:local": "wrangler d1 migrations apply whitewoodsrl-local --local",
+    "db:seed:local": "wrangler d1 execute whitewoodsrl-local --local --file=seeds/local-demo.sql && node scripts/seed-assets.mjs && wrangler d1 execute whitewoodsrl-local --local --file=seeds/local-assets.generated.sql",
+    "db:setup:local": "node scripts/prepare-local.mjs && wrangler d1 migrations apply whitewoodsrl-local --local && wrangler d1 execute whitewoodsrl-local --local --file=seeds/local-demo.sql && node scripts/seed-assets.mjs && wrangler d1 execute whitewoodsrl-local --local --file=seeds/local-assets.generated.sql",
+    "assets:import": "node scripts/import-public-assets.mjs",
+    "assets:inventory": "node scripts/write-asset-inventory.mjs",
+    "assets:optimize": "node scripts/optimize-assets.mjs",
+    "deploy:production": "npm run build && wrangler deploy --env production",
+    "db:migrate:production": "wrangler d1 migrations apply whitewoodsrl-production --remote --env production"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "14.3.4",
+    "astro": "7.3.8"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@cloudflare/workers-types": "5.20261010.1",
+    "sharp": "0.35.5",
+    "typescript": "5.9.3",
+    "wrangler": "4.149.0"
+  },
+  "allowScripts": {
+    "workerd@1.20261006.1": true,
+    "esbuild@0.28.2": true
+  }
+}

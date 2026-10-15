@@ -1,0 +1,17 @@
+---
+import SiteLayout from "../layouts/SiteLayout.astro";
+import NotFoundPanel from "../components/NotFoundPanel.astro";
+Astro.response.status = 404;
+---
+
+<SiteLayout language="ro" title="Pagina nu a fost găsită | WhiteWOOD" description="Pagina solicitată nu este disponibilă." noindex>
+  <NotFoundPanel
+    language="ro"
+    title="Pagina nu a fost găsită"
+    description="Pagina solicitată nu este disponibilă. Poți reveni acasă sau poți explora catalogul WhiteWOOD."
+    primaryHref="/ro/"
+    primaryLabel="Înapoi acasă"
+    secondaryHref="/ro/produse/"
+    secondaryLabel="Vezi catalogul"
+  />
+</SiteLayout>

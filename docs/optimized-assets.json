@@ -1,0 +1,170 @@
+[
+  {
+    "source": "media/originals/img/img-1000/about-us-01.webp",
+    "sourceBytes": 114968,
+    "width": 1000,
+    "height": 667,
+    "alt": "Cherestea stivuită în curtea de lucru",
+    "outputs": [
+      {
+        "width": 480,
+        "webp": "media/optimized/hero-yard-480.webp",
+        "avif": "media/optimized/hero-yard-480.avif"
+      },
+      {
+        "width": 960,
+        "webp": "media/optimized/hero-yard-960.webp",
+        "avif": "media/optimized/hero-yard-960.avif"
+      },
+      {
+        "width": 1000,
+        "webp": "media/optimized/hero-yard-1000.webp",
+        "avif": "media/optimized/hero-yard-1000.avif"
+      }
+    ]
+  },
+  {
+    "source": "media/originals/img/_ro/img-1000/depozit-cherestea-constanta.webp",
+    "sourceBytes": 90184,
+    "width": 1000,
+    "height": 667,
+    "alt": "Pachete de cherestea pregătite pentru transport",
+    "outputs": [
+      {
+        "width": 480,
+        "webp": "media/optimized/process-yard-480.webp",
+        "avif": "media/optimized/process-yard-480.avif"
+      },
+      {
+        "width": 960,
+        "webp": "media/optimized/process-yard-960.webp",
+        "avif": "media/optimized/process-yard-960.avif"
+      },
+      {
+        "width": 1000,
+        "webp": "media/optimized/process-yard-1000.webp",
+        "avif": "media/optimized/process-yard-1000.avif"
+      }
+    ]
+  },
+  {
+    "source": "media/originals/img/_ro/img-1000/incarcare-cherestea-container-filler.webp",
+    "sourceBytes": 104960,
+    "width": 1000,
+    "height": 667,
+    "alt": "Cherestea așezată pe instalația de încărcare",
+    "outputs": [
+      {
+        "width": 480,
+        "webp": "media/optimized/container-loading-480.webp",
+        "avif": "media/optimized/container-loading-480.avif"
+      },
+      {
+        "width": 960,
+        "webp": "media/optimized/container-loading-960.webp",
+        "avif": "media/optimized/container-loading-960.avif"
+      },
+      {
+        "width": 1000,
+        "webp": "media/optimized/container-loading-1000.webp",
+        "avif": "media/optimized/container-loading-1000.avif"
+      }
+    ]
+  },
+  {
+    "source": "media/originals/img/img-1000/sawn-timber-beech-type-a-01.webp",
+    "sourceBytes": 64090,
+    "width": 1000,
+    "height": 667,
+    "alt": "Cherestea de fag stivuită",
+    "outputs": [
+      {
+        "width": 480,
+        "webp": "media/optimized/product-beech-480.webp",
+        "avif": "media/optimized/product-beech-480.avif"
+      },
+      {
+        "width": 960,
+        "webp": "media/optimized/product-beech-960.webp",
+        "avif": "media/optimized/product-beech-960.avif"
+      },
+      {
+        "width": 1000,
+        "webp": "media/optimized/product-beech-1000.webp",
+        "avif": "media/optimized/product-beech-1000.avif"
+      }
+    ]
+  },
+  {
+    "source": "media/originals/img/img-1000/ash-sawn-timber-type-a-01.webp",
+    "sourceBytes": 31240,
+    "width": 1000,
+    "height": 667,
+    "alt": "Cherestea de frasin stivuită",
+    "outputs": [
+      {
+        "width": 480,
+        "webp": "media/optimized/product-ash-480.webp",
+        "avif": "media/optimized/product-ash-480.avif"
+      },
+      {
+        "width": 960,
+        "webp": "media/optimized/product-ash-960.webp",
+        "avif": "media/optimized/product-ash-960.avif"
+      },
+      {
+        "width": 1000,
+        "webp": "media/optimized/product-ash-1000.webp",
+        "avif": "media/optimized/product-ash-1000.avif"
+      }
+    ]
+  },
+  {
+    "source": "media/originals/img/_ro/img-1000/cherestea-rasinoase-s4s-tip-a-01.webp",
+    "sourceBytes": 51350,
+    "width": 1000,
+    "height": 667,
+    "alt": "Cherestea rindeluită din rășinoase",
+    "outputs": [
+      {
+        "width": 480,
+        "webp": "media/optimized/product-softwood-480.webp",
+        "avif": "media/optimized/product-softwood-480.avif"
+      },
+      {
+        "width": 960,
+        "webp": "media/optimized/product-softwood-960.webp",
+        "avif": "media/optimized/product-softwood-960.avif"
+      },
+      {
+        "width": 1000,
+        "webp": "media/optimized/product-softwood-1000.webp",
+        "avif": "media/optimized/product-softwood-1000.avif"
+      }
+    ]
+  },
+  {
+    "source": "media/originals/img/_ro/img-1000/lemn-pentru-ambalat-tratat-ispm15.webp",
+    "sourceBytes": 42058,
+    "width": 1000,
+    "height": 667,
+    "alt": "Ambalaje realizate din lemn",
+    "outputs": [
+      {
+        "width": 480,
+        "webp": "media/optimized/product-packaging-480.webp",
+        "avif": "media/optimized/product-packaging-480.avif"
+      },
+      {
+        "width": 960,
+        "webp": "media/optimized/product-packaging-960.webp",
+        "avif": "media/optimized/product-packaging-960.avif"
+      },
+      {
+        "width": 1000,
+        "webp": "media/optimized/product-packaging-1000.webp",
+        "avif": "media/optimized/product-packaging-1000.avif"
+      }
+    ]
+  }
+]

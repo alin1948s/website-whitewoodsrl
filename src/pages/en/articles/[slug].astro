@@ -1,0 +1,13 @@
+---
+import ArticleDetail from "../../../components/ArticleDetail.astro";
+import { getAppMode, getDatabase } from "../../../lib/db";
+import { getArticleBySlug, getPublishedArticles } from "../../../lib/repositories";
+export const prerender = false;
+const slug = Astro.params.slug || "";
+const db = getDatabase();
+const mode = getAppMode();
+const article = await getArticleBySlug(db, slug, "en", mode);
+const alternateSlug = article ? (await getPublishedArticles(db, "ro", mode)).find((item) => item.id === article.id)?.slug : undefined;
+---
+
+<ArticleDetail language="en" article={article} alternateSlug={alternateSlug} />

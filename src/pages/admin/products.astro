@@ -1,0 +1,94 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { countAdminUsers, getAdminSession } from "../../lib/auth";
+import { getAppMode, getDatabase } from "../../lib/db";
+export const prerender = false;
+const db = getDatabase();
+if (await countAdminUsers(db) === 0) return Astro.redirect("/admin/setup/");
+const session = await getAdminSession(db, Astro.request);
+if (!session) return Astro.redirect("/admin/login/");
+const mode = getAppMode();
+const categories = await db.prepare("SELECT id,slug,name_ro,name_en,description_ro,description_en,sort_order,status FROM product_categories ORDER BY sort_order,name_ro").all<{
+  id: string; slug: string; name_ro: string; name_en: string; description_ro: string | null; description_en: string | null; sort_order: number; status: string;
+}>();
+const products = await db.prepare(`SELECT p.*,c.name_ro AS category_name FROM products p JOIN product_categories c ON c.id=p.category_id ORDER BY c.sort_order,p.title_ro`).all<{
+  id: string; category_id: string; category_name: string; slug_ro: string; slug_en: string; species: string | null; title_ro: string; title_en: string;
+  intro_ro: string | null; intro_en: string | null; use_ro: string | null; use_en: string | null; verification_status: string; status: string; is_demo: number;
+}>();
+const allSpecs = await db.prepare("SELECT * FROM product_specs ORDER BY product_id,sort_order").all<{
+  id: string; product_id: string; spec_key: string; label_ro: string; label_en: string; value_ro: string; value_en: string; unit: string | null; is_confirmed: number; source_note: string | null;
+}>();
+const specsFor = (id: string) => (allSpecs.results ?? []).filter((spec) => spec.product_id === id).map((spec) => ({
+  key: spec.spec_key, label_ro: spec.label_ro, label_en: spec.label_en, value_ro: spec.value_ro, value_en: spec.value_en, unit: spec.unit,
+  is_confirmed: spec.is_confirmed === 1, source_note: spec.source_note
+}));
+const saved = Astro.url.searchParams.get("saved") === "1";
+---
+
+<AdminLayout title="Produse" session={session} mode={mode}>
+  {saved && <p class="admin-flash">Modificările au fost salvate.</p>}
+  <p class="muted">Valorile tehnice se afișează în configurator numai când <code>is_confirmed</code> este <code>true</code>. Un produs poate fi publicat numai după confirmarea WhiteWOOD.</p>
+  <section id="categories" class="admin-panel"><h3>Categorii</h3><p class="muted">Numele RO/EN și starea se gestionează separat de produsele din categorie. Categorii arhivate rămân păstrate în date.</p>
+    <div class="admin-form-list">
+      {(categories.results ?? []).map((category) => <details class="admin-edit"><summary>{category.name_ro} / {category.name_en} · {category.slug} · {category.status}</summary>
+        <form method="post" action="/api/admin/products/"><input type="hidden" name="action" value="save-category" /><input type="hidden" name="csrf" value={session.csrf} /><input type="hidden" name="id" value={category.id} />
+          <div class="admin-edit-grid"><div class="field"><label>Slug</label><input name="slug" value={category.slug} required /></div><div class="field"><label>Ordine</label><input type="number" name="sort_order" min="0" max="9999" value={category.sort_order} /></div>
+            <div class="field"><label>Nume RO</label><input name="name_ro" value={category.name_ro} required maxlength="160" /></div><div class="field"><label>Name EN</label><input name="name_en" value={category.name_en} required maxlength="160" /></div>
+            <div class="field"><label>Descriere RO</label><textarea name="description_ro" maxlength="1000">{category.description_ro}</textarea></div><div class="field"><label>Description EN</label><textarea name="description_en" maxlength="1000">{category.description_en}</textarea></div>
+            <div class="field"><label>Stare</label><select name="status"><option value="draft" selected={category.status === "draft"}>Draft</option><option value="published" selected={category.status === "published"}>Publicat</option><option value="archived" selected={category.status === "archived"}>Arhivat</option></select></div>
+          </div><div class="admin-actions"><button class="button button--small" type="submit">Salvează categoria</button></div>
+        </form>
+      </details>)}
+    </div>
+    <details class="admin-edit admin-edit--spaced"><summary>Adaugă categorie</summary><form method="post" action="/api/admin/products/"><input type="hidden" name="action" value="save-category" /><input type="hidden" name="csrf" value={session.csrf} />
+      <div class="admin-edit-grid"><div class="field"><label>Slug</label><input name="slug" required /></div><div class="field"><label>Ordine</label><input type="number" name="sort_order" min="0" max="9999" value="0" /></div>
+        <div class="field"><label>Nume RO</label><input name="name_ro" required /></div><div class="field"><label>Name EN</label><input name="name_en" required /></div><div class="field"><label>Descriere RO</label><textarea name="description_ro"></textarea></div><div class="field"><label>Description EN</label><textarea name="description_en"></textarea></div>
+        <div class="field"><label>Stare</label><select name="status"><option value="draft">Draft</option><option value="published">Publicat</option><option value="archived">Arhivat</option></select></div>
+      </div><div class="admin-actions"><button class="button button--small" type="submit">Creează categoria</button></div>
+    </form></details>
+  </section>
+  <div class="admin-form-list">
+    {(products.results ?? []).map((product) => (
+      <details class="admin-edit">
+        <summary>{product.title_ro} · {product.category_name} {product.is_demo === 1 && <span class="admin-status">DEMO</span>} — {product.status} / {product.verification_status}</summary>
+        <form method="post" action="/api/admin/products/">
+          <input type="hidden" name="csrf" value={session.csrf} /><input type="hidden" name="id" value={product.id} />
+          <div class="admin-edit-grid">
+            <div class="field"><label for={`category-${product.id}`}>Categorie</label><select id={`category-${product.id}`} name="category_id">{(categories.results ?? []).map((category) => <option value={category.id} selected={category.id === product.category_id}>{category.name_ro} / {category.name_en} · {category.status}</option>)}</select></div>
+            <div class="field"><label for={`species-${product.id}`}>Specie</label><input id={`species-${product.id}`} name="species" value={product.species || ""} maxlength="180" /></div>
+            <div class="field"><label for={`slugro-${product.id}`}>Slug RO</label><input id={`slugro-${product.id}`} name="slug_ro" value={product.slug_ro} required /></div>
+            <div class="field"><label for={`slugen-${product.id}`}>Slug EN</label><input id={`slugen-${product.id}`} name="slug_en" value={product.slug_en} required /></div>
+            <div class="field"><label for={`titlero-${product.id}`}>Titlu RO</label><input id={`titlero-${product.id}`} name="title_ro" value={product.title_ro} required maxlength="160" /></div>
+            <div class="field"><label for={`titleen-${product.id}`}>Title EN</label><input id={`titleen-${product.id}`} name="title_en" value={product.title_en} required maxlength="160" /></div>
+            <div class="field"><label for={`intro-ro-${product.id}`}>Introducere RO</label><textarea id={`intro-ro-${product.id}`} name="intro_ro">{product.intro_ro}</textarea></div>
+            <div class="field"><label for={`intro-en-${product.id}`}>Introduction EN</label><textarea id={`intro-en-${product.id}`} name="intro_en">{product.intro_en}</textarea></div>
+            <div class="field"><label for={`use-ro-${product.id}`}>Utilizări RO</label><textarea id={`use-ro-${product.id}`} name="use_ro">{product.use_ro}</textarea></div>
+            <div class="field"><label for={`use-en-${product.id}`}>Uses EN</label><textarea id={`use-en-${product.id}`} name="use_en">{product.use_en}</textarea></div>
+            <div class="field"><label for={`verification-${product.id}`}>Verificare</label><select id={`verification-${product.id}`} name="verification_status"><option value="needs_review" selected={product.verification_status === "needs_review"}>Necesită revizie</option><option value="source_published" selected={product.verification_status === "source_published"}>Publicat pe site-ul sursă</option><option value="company_confirmed" selected={product.verification_status === "company_confirmed"}>Confirmat de companie</option></select></div>
+            <div class="field"><label for={`status-${product.id}`}>Stare</label><select id={`status-${product.id}`} name="status"><option value="draft" selected={product.status === "draft"}>Draft</option><option value="published" selected={product.status === "published"}>Publicat</option><option value="archived" selected={product.status === "archived"}>Arhivat</option></select></div>
+            <div class="field field--wide"><label for={`specs-${product.id}`}>Specificații JSON · o intrare per valoare</label><textarea class="json-field" id={`specs-${product.id}`} name="specs_json">{JSON.stringify(specsFor(product.id), null, 2)}</textarea><small>Format: key, label_ro, label_en, value_ro, value_en, unit, is_confirmed și source_note. Păstrează false până la confirmare.</small></div>
+          </div>
+          <div class="admin-actions"><button class="button button--small" type="submit">Salvează produsul</button><span class="muted">Demo: {product.is_demo === 1 ? "da" : "nu"}</span></div>
+        </form>
+      </details>
+    ))}
+  </div>
+  <details class="admin-edit admin-edit--spaced"><summary>Adaugă produs</summary>
+    <form method="post" action="/api/admin/products/">
+      <input type="hidden" name="csrf" value={session.csrf} />
+      <div class="admin-edit-grid">
+        <input type="hidden" name="action" value="save-product" />
+        <div class="field"><label>Categorie</label><select name="category_id" required>{(categories.results ?? []).map((category) => <option value={category.id}>{category.name_ro} / {category.name_en} · {category.status}</option>)}</select></div>
+        <div class="field"><label>Specie</label><input name="species" maxlength="180" /></div>
+        <div class="field"><label>Slug RO</label><input name="slug_ro" required /></div><div class="field"><label>Slug EN</label><input name="slug_en" required /></div>
+        <div class="field"><label>Titlu RO</label><input name="title_ro" required /></div><div class="field"><label>Title EN</label><input name="title_en" required /></div>
+        <div class="field"><label>Introducere RO</label><textarea name="intro_ro"></textarea></div><div class="field"><label>Introduction EN</label><textarea name="intro_en"></textarea></div>
+        <div class="field"><label>Utilizări RO</label><textarea name="use_ro"></textarea></div><div class="field"><label>Uses EN</label><textarea name="use_en"></textarea></div>
+        <div class="field"><label>Verificare</label><select name="verification_status"><option value="needs_review">Necesită revizie</option><option value="source_published">Publicat pe site-ul sursă</option><option value="company_confirmed">Confirmat de companie</option></select></div>
+        <div class="field"><label>Stare</label><select name="status"><option value="draft">Draft</option><option value="published">Publicat</option><option value="archived">Arhivat</option></select></div>
+        <div class="field field--wide"><label>Specificații JSON</label><textarea class="json-field" name="specs_json">[]</textarea></div>
+      </div>
+      <div class="admin-actions"><button class="button button--small" type="submit">Creează draft</button></div>
+    </form>
+  </details>
+</AdminLayout>

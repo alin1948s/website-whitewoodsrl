@@ -1,0 +1,7 @@
+# Copiază în .dev.vars și înlocuiește valorile cu secrete locale generate de tine.
+APP_MODE=local
+SITE_ORIGIN=http://localhost:4321
+SESSION_SECRET=replace-with-a-random-secret-of-at-least-32-characters
+ADMIN_BOOTSTRAP_TOKEN=generate-a-random-one-time-token
+PRIVACY_NOTICE_APPROVED=false
+PUBLIC_MEDIA_APPROVED=true

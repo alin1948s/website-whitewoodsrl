@@ -1,0 +1,10 @@
+{
+  "extends": "astro/tsconfigs/strictest",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true
+  },
+  "include": [".astro/types.d.ts", "src/**/*", "worker-configuration.d.ts"],
+  "exclude": ["dist", ".wrangler"]
+}

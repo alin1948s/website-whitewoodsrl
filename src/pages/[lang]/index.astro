@@ -1,0 +1,105 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import Photo from "../../components/Photo.astro";
+import WoodMark from "../../components/WoodMark.astro";
+import { getAppMode, getDatabase, mediaIsAllowed } from "../../lib/db";
+import { isLanguage, type SiteLanguage } from "../../lib/language";
+import { getContentPage, getPublishedProducts } from "../../lib/repositories";
+
+export const prerender = false;
+const languageParam = Astro.params.lang;
+if (!isLanguage(languageParam)) Astro.response.status = 404;
+const language: SiteLanguage = isLanguage(languageParam) ? languageParam : "ro";
+const ro = language === "ro";
+const mode = getAppMode();
+const db = getDatabase();
+const page = await getContentPage(db, "home", language, mode);
+const products = await getPublishedProducts(db, language, mode);
+const mediaEnabled = mediaIsAllowed();
+const homeDescription = ro
+  ? "Cherestea de fag, frasin și molid, lemn pentru ambalaje și pregătirea loturilor pentru expediere din Portul Constanța."
+  : "Beech, ash and spruce timber, wood for packaging, and shipment preparation at the Port of Constanța.";
+const homeIntro = ro
+  ? "Cherestea și grinzi din fag, frasin și molid, alături de lemn pentru ambalaje. Descoperă sortimente pentru construcții, mobilier și finisaje."
+  : "Sawn timber and beams in beech, ash and spruce, alongside wood for packaging. Explore grades for construction, furniture and finishing.";
+const alternateHref = ro ? "/en/" : "/ro/";
+const operations = ro
+  ? ["Verificare și sortare", "Uscare la aer sau în uscător", "Vopsire și marcare", "Ambalare și încărcare"]
+  : ["Checking and sorting", "Air or kiln drying", "Painting and marking", "Packaging and loading"];
+---
+
+<SiteLayout language={language} title={`WhiteWOOD | ${ro ? "Cherestea" : "Sawn timber"}`} description={page?.seoDescription || homeDescription} alternateHref={alternateHref}>
+  <section class:list={["wrap hero", !mediaEnabled && "hero--text-only"]}>
+    <div class="hero-copy">
+      <p class="eyebrow">{ro ? "Cherestea · România · Export" : "Sawn timber · Romania · Export"}</p>
+      <h1>{ro ? <>Cherestea românească.<br /><em>Pregătită pentru expediție.</em></> : <>Romanian sawn timber.<br /><em>Prepared for shipment.</em></>}</h1>
+      <p class="hero-lede">{page?.intro || homeIntro}</p>
+      <div class="hero-links"><a class="button" href={`/${language}/contact/#quote`}>{ro ? "Solicită o ofertă" : "Request a quote"}<span aria-hidden="true">↗</span></a><a class="button button--light" href={ro ? "/ro/produse/" : "/en/products/"}>{ro ? "Explorează produsele" : "Explore products"}</a></div>
+      <div class="hero-stamp"><WoodMark /><span>{ro ? "Fag · Frasin · Molid · Ambalaje" : "Beech · Ash · Spruce · Packaging"}</span></div>
+    </div>
+    {mediaEnabled && <figure class="hero-image">
+      <Photo name="hero-yard" alt={ro ? "Cherestea stivuită în curtea de lucru" : "Stacks of sawn timber in a working yard"} sizes="(max-width: 760px) 100vw, 52vw" loading="eager" fetchpriority="high" />
+      <figcaption class="photo-caption">{ro ? "Prelucrare și pregătire" : "Processing and preparation"}</figcaption>
+    </figure>}
+  </section>
+
+  <section class="wrap intro-band">
+    <div><p class="eyebrow">{ro ? "WhiteWOOD / Catalog" : "WhiteWOOD / Catalogue"}</p><h2>{ro ? "Specia este începutul unei conversații." : "Species is the start of a conversation."}</h2></div>
+    <p>{ro ? "Din 1996, WhiteWOOD se ocupă de exploatarea și prelucrarea lemnului. Gama cuprinde cherestea și grinzi din fag, frasin, molid și brad, precum și lemn pentru ambalaje. Explorează sortimentele, dimensiunile și utilizările fiecărei specii." : "Since 1996, WhiteWOOD has worked in timber harvesting and processing. Its range includes sawn timber and beams in beech, ash, spruce and fir, as well as wood for packaging. Explore the grades, dimensions and uses of each species."}</p>
+  </section>
+
+  <section class="wrap section">
+    <div class="section-heading"><div><p class="eyebrow">{ro ? "Sortimente" : "Grades"}</p><h2>{ro ? "Cherestea pe specii și sortimente." : "Timber by species and grade."}</h2></div><p>{ro ? "Fag clasa A și A/B, frasin clasa A, molid clasa A și lemn uscat, rindeluit pe patru fețe, pentru ambalaje." : "Grade A and A/B beech, grade A ash and spruce, and dried, four-side planed timber for packaging."}</p></div>
+    <div class="product-index">
+      {products.map((product) => (
+        <a class="product-row" href={`${ro ? "/ro/produse" : "/en/products"}/${product.slug}/`}>
+          <div><h3>{product.title}</h3><p>{product.species || (ro ? "Ambalare și transport internațional" : "Packaging for international transport")}</p></div>
+          <p>{product.intro}</p>
+          <span class="product-arrow" aria-hidden="true">↗</span>
+        </a>
+      ))}
+    </div>
+    {mediaEnabled && <div class="product-image-grid">
+      <figure><Photo name="product-beech" alt={ro ? "Cherestea de fag stivuită" : "Stacks of beech sawn timber"} sizes="(max-width: 760px) 100vw, 38vw" /><figcaption>{ro ? "Fag" : "Beech"}</figcaption></figure>
+      <figure><Photo name="product-ash" alt={ro ? "Cherestea de frasin tăiată și stivuită" : "Cut and stacked ash timber"} sizes="(max-width: 760px) 100vw, 30vw" /><figcaption>{ro ? "Frasin" : "Ash"}</figcaption></figure>
+      <figure><Photo name="product-softwood" alt={ro ? "Cherestea de rășinoase rindeluită" : "Planed softwood timber"} sizes="(max-width: 760px) 100vw, 32vw" /><figcaption>{ro ? "Rășinoase" : "Softwood"}</figcaption></figure>
+      <figure><Photo name="product-packaging" alt={ro ? "Ambalaje realizate din lemn" : "Wooden packaging"} sizes="(max-width: 760px) 100vw, 32vw" /><figcaption>{ro ? "Ambalaje" : "Packaging"}</figcaption></figure>
+    </div>}
+  </section>
+
+  <section class="process-strip">
+    <div class="wrap process-strip-layout">
+      <div class="process-strip-copy"><p class="eyebrow">{ro ? "Pregătirea cherestelei" : "Timber preparation"}</p><h2>{ro ? "De la sortare la container." : "From grading to container."}</h2><p class="muted process-intro">{ro ? "În funcție de sortiment, pregătirea lotului include verificare și sortare, uscare la aer sau în uscător, vopsire, marcare, ambalare și pachetizare. Încărcarea în containere se face cu echipamentul Container Filler." : "Depending on the grade, lot preparation includes checking and sorting, air or kiln drying, painting, marking, packaging and bundling. Container Filler equipment is used to load sawn timber into containers."}</p></div>
+      <div class="process-grid">{operations.map((operation, index) => <div class="process-step"><span>{String(index + 1).padStart(2, "0")}</span><p>{operation}</p></div>)}</div>
+    </div>
+  </section>
+
+  <section class="wrap section--tight">
+    <div class="route-panel">
+      <div><p class="eyebrow">{ro ? "Logistică" : "Logistics"}</p><h2>{ro ? "Depozitare și încărcare la Constanța." : "Storage and loading in Constanța."}</h2><p class="muted">{ro ? "Depozitele și serviciile logistice WhiteWOOD sunt la Portul Constanța, Poarta 2. Cheresteaua este pregătită, ambalată și încărcată în containere pentru expediere." : "WhiteWOOD’s storage and logistics operations are at Gate 2 of the Port of Constanța. Sawn timber is prepared, packaged and loaded into containers for shipment."}</p></div>
+      <div class="route-visual">
+        <p class="route-heading">{ro ? "Traseul produsului" : "Product route"}</p>
+        <ol class="route-line" aria-label={ro ? "Traseu ilustrativ: cherestea, pregătire, port" : "Illustrative route: timber, preparation, port"}>
+          <li class="route-node">
+            <span class="route-icon" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="11.5" /><circle cx="16" cy="16" r="7.5" /><circle cx="16" cy="16" r="3.5" /><path d="M16 4.5v3M27.5 16h-3M16 27.5v-3M4.5 16h3" /></svg></span>
+            <span class="route-label">{ro ? "Fibră" : "Grain"}</span>
+          </li>
+          <li class="route-node">
+            <span class="route-icon" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M5 9.5h22M5 15.5h22M5 21.5h22M8 7v17M16 7v17M24 7v17M4 25.5h24" /></svg></span>
+            <span class="route-label">{ro ? "Pregătire" : "Preparation"}</span>
+          </li>
+          <li class="route-node">
+            <span class="route-icon" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><rect x="4.5" y="6.5" width="23" height="15" rx="1.5" /><path d="M10 7v14M16 7v14M22 7v14M3.5 25c2 0 2-.9 4-.9s2 .9 4 .9 2-.9 4-.9 2 .9 4 .9 2-.9 4-.9 2 .9 4 .9" /></svg></span>
+            <span class="route-label">{ro ? "Port" : "Port"}</span>
+          </li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap quote-band">
+    <div><p class="eyebrow">{ro ? "Cerere B2B" : "B2B enquiry"}</p><h2>{ro ? "Spune-ne ce cauți." : "Tell us what you need."}</h2></div>
+    <p>{ro ? "Discută cu echipa WhiteWOOD despre sortimentul, volumul și destinația proiectului tău." : "Talk with the WhiteWOOD team about the grade, volume and destination for your project."}</p>
+    <a class="button" href={`/${language}/contact/#quote`}>{ro ? "Solicită o ofertă" : "Request a quote"}<span aria-hidden="true">↗</span></a>
+  </section>
+</SiteLayout>
